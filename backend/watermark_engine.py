@@ -359,6 +359,105 @@ def idct_gambar_paralel(daftar_blok_dct, info_dimensi, jumlah_proses=None) -> Im
     return array_ke_pil(array)
 
 
+# ---------------------------------------------------------------------------
+# Skema BLIND (pengayaan): tanpa citra asli saat deteksi
+# ---------------------------------------------------------------------------
+# Beda skema dengan spread-spectrum non-blind di atas (tidak saling baca):
+# bit dikodekan sebagai TANDA selisih dua koefisien mid-freq dalam blok yang
+# sama: F(P1)-F(P2) >= +alpha -> bit 1; <= -alpha -> bit 0. Ekstraksi hanya
+# butuh stego + kunci (urutan blok) + jumlah bit — TANPA citra asli.
+# Koefisien P1/P2 disengaja beda dari (BARIS_SISIP, KOLOM_SISIP) agar kedua
+# skema tidak saling mengotori bila dipakai bergantian pada satu citra.
+# Konsekuensi jujur: tanpa spreading-gain, ketahanan di bawah skema non-blind
+# (cadangan saat citra asli hilang, bukan pengganti utama).
+BLIND_P1 = (2, 3)
+BLIND_P2 = (3, 2)
+
+
+def sisip_watermark_blind(citra, bit_watermark, kunci: str,
+                          alpha: float = 15.0,  # sama dengan ALPHA_DEFAULT (didefinisikan di bawah)
+                          jumlah_proses=None) -> Image.Image:
+    """Menyisipkan bit watermark secara blind (terbaca tanpa citra asli).
+
+    Per bit: selisih d = F(P1)-F(P2) didorong minimal sejauh alpha ke arah
+    tanda bit (bit 1 -> d >= +alpha; bit 0 -> d <= -alpha) dengan
+    menggeser kedua koefisien simetris (distorsi minimal). Sisipan hanya di
+    kanal luminansi Y seperti skema non-blind (warna lestari).
+    """
+    bit = [1 if b else 0 for b in bit_watermark]
+    if not bit:
+        raise ValueError("Bit watermark kosong.")
+    if not kunci or not isinstance(kunci, str):
+        raise ValueError("Kunci harus berupa string tidak kosong.")
+    if not isinstance(alpha, (int, float)) or float(alpha) <= 0:
+        raise ValueError(f"Alpha harus > 0, ditemukan {alpha}.")
+    alpha = float(alpha)
+
+    luminansi, mode_asli, pita_warna = _ke_luminansi_dan_warna(citra)
+    daftar_blok, tinggi, lebar, tinggi_pad, lebar_pad = pecah_ke_blok_8x8(luminansi)
+    if len(bit) > len(daftar_blok):
+        raise ValueError(
+            f"Kapasitas tidak cukup: butuh {len(bit)} blok, citra hanya punya "
+            f"{len(daftar_blok)} blok."
+        )
+    daftar_dct = terapkan_dct_paralel(daftar_blok, jumlah_proses)
+    permutasi = generate_position_permutation(kunci, len(daftar_blok), n_select=len(bit))
+
+    r1, c1 = BLIND_P1
+    r2, c2 = BLIND_P2
+    for i, b in enumerate(bit):
+        blok = daftar_dct[int(permutasi[i])]
+        d = blok[r1][c1] - blok[r2][c2]
+        if b:
+            if d < alpha:
+                kurang = (alpha - d) / 2.0
+                blok[r1][c1] += kurang
+                blok[r2][c2] -= kurang
+        else:
+            if d > -alpha:
+                lebih = (d + alpha) / 2.0
+                blok[r1][c1] -= lebih
+                blok[r2][c2] += lebih
+
+    daftar_spasial = terapkan_idct_paralel(daftar_dct, jumlah_proses)
+    array_stego = susun_dari_blok_8x8(daftar_spasial, tinggi, lebar,
+                                      tinggi_pad, lebar_pad)
+    return _dari_luminansi(array_stego, mode_asli, pita_warna)
+
+
+def ekstrak_watermark_blind(citra_input, kunci: str, jumlah_bit: int,
+                            jumlah_proses=None) -> list:
+    """Mengekstrak bit watermark TANPA citra asli (skema blind).
+
+    Bit = 1 bila F(P1)-F(P2) > 0 pada blok urutan kunci, else 0.
+    Dimensi/isi citra bebas (hasil serangan apa pun, termasuk crop —
+    sinkronisasi grid tetap ditangani? TIDAK: crop menggeser grid sehingga
+    ekstraksi blind pasca-crop tak-sejajar -> NC rendah yang jujur, bukan
+    penolakan; hanya citra kosong yang ditolak).
+    """
+    if not kunci or not isinstance(kunci, str):
+        raise ValueError("Kunci harus berupa string tidak kosong.")
+    if not isinstance(jumlah_bit, int) or jumlah_bit < 1:
+        raise ValueError("Jumlah bit harus bilangan bulat >= 1.")
+    luminansi, _, _ = _ke_luminansi_dan_warna(citra_input)
+    daftar_blok, _, _, _, _ = pecah_ke_blok_8x8(luminansi)
+    if jumlah_bit > len(daftar_blok):
+        raise ValueError(
+            f"Jumlah bit ({jumlah_bit}) melebihi kapasitas citra "
+            f"({len(daftar_blok)} blok)."
+        )
+    daftar_dct = terapkan_dct_paralel(daftar_blok, jumlah_proses)
+    permutasi = generate_position_permutation(kunci, len(daftar_blok), n_select=jumlah_bit)
+
+    r1, c1 = BLIND_P1
+    r2, c2 = BLIND_P2
+    hasil = []
+    for i in range(jumlah_bit):
+        blok = daftar_dct[int(permutasi[i])]
+        hasil.append(1 if blok[r1][c1] - blok[r2][c2] > 0 else 0)
+    return hasil
+
+
 # Alias Inggris agar mudah dipakai dari modul lain / pengujian.
 # Nama Indonesia tetap menjadi API utama.
 def split_into_8x8_blocks(array: np.ndarray):

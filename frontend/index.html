@@ -14,6 +14,7 @@
   <nav class="mt-3 flex gap-2 text-sm">
     <button id="tab-mode1" class="px-4 py-1 rounded bg-emerald-600 font-semibold">Sisip &amp; Uji Serangan</button>
     <button id="tab-mode2" class="px-4 py-1 rounded bg-slate-700">Verifikasi Kepemilikan</button>
+    <button id="tab-mode3" class="px-4 py-1 rounded bg-slate-700">Watermark di Citra AI</button>
   </nav>
 </header>
 
@@ -56,9 +57,14 @@
           <input id="m1-alpha" type="number" value="15" min="0.1" step="0.5"
                  class="mt-1 block w-32 border rounded px-2 py-1">
         </label>
+        <div class="block">Skema<br>
+          <label class="mr-3" title="Tahan, tapi butuh citra asli saat ekstrak"><input type="radio" name="m1-skema" value="nonblind" checked> Non-blind</label>
+          <label title="Cadangan: terbaca tanpa citra asli, sedikit kurang tahan"><input type="radio" name="m1-skema" value="blind"> Blind</label>
+        </div>
       </div>
-      <div class="mt-3 flex items-center gap-3">
+      <div class="mt-3 flex flex-wrap items-center gap-3">
         <button id="m1-sisip" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm disabled:opacity-40" disabled>Sisipkan</button>
+        <button id="m1-kem2" class="px-4 py-1 rounded bg-slate-600 text-white text-sm disabled:opacity-40" disabled title="Salin kunci, jumlah bit, alpha & pembanding ke tab Verifikasi (file citra tetap diunggah manual)">Salin ke Verifikasi</button>
         <span id="m1-status" class="text-sm text-slate-500">Unggah citra cover dulu.</span>
       </div>
       <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -120,6 +126,10 @@
           <input id="m2-nbit" type="number" min="1" placeholder="lihat dari hasil Sisipkan"
                  class="mt-1 block w-full border rounded px-2 py-1">
         </label>
+        <div class="block">Skema<br>
+          <label class="mr-3"><input type="radio" name="m2-skema" value="nonblind" checked> Non-blind (butuh citra asli)</label>
+          <label><input type="radio" name="m2-skema" value="blind"> Blind (tanpa citra asli)</label>
+        </div>
         <div class="block">Pembanding<br>
           <label class="mr-3"><input type="radio" name="m2-wmmode" value="teks" checked> Teks</label>
           <label><input type="radio" name="m2-wmmode" value="logo"> Logo</label>
@@ -146,6 +156,49 @@
     </section>
   </div>
 
+  <!-- ================= MODE 3 (pengayaan §5) ================= -->
+  <div id="panel-mode3" class="hidden space-y-6">
+    <section class="bg-white rounded shadow p-4">
+      <h2 class="font-semibold mb-2">Watermark pada Citra AI-Generatif (pengayaan)</h2>
+      <p class="text-sm text-slate-500 mb-3">Menguji ketahanan <b>watermark kita</b> bila cover-nya gambar AI
+        (bukan mendeteksi apakah gambar dibuat AI).</p>
+      <p class="text-sm text-slate-500 mb-3">Alur sama seperti Mode 1 (logo pola 32×32, alpha 15),
+        tetapi cover-nya gambar AI. Hasil AI dibandingkan dengan <b>rata-rata 3 citra utama
+        dari hasil_pengujian.xlsx</b> (nilai acuan statis, bukan hitungan live).</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <label class="block">Citra AI (JPG/PNG, ≤1024px disarankan)
+          <input id="m3-cover" type="file" accept="image/*"
+                 class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
+        </label>
+        <label class="block">Kunci rahasia
+          <span class="mt-1 flex gap-2">
+            <input id="m3-key" type="text" placeholder="ketik atau buat acak"
+                   class="flex-1 border rounded px-2 py-1">
+            <button id="m3-acapkunci" type="button" class="px-3 py-1 rounded bg-slate-600 text-white">Acak</button>
+          </span>
+        </label>
+        <label class="block">Alpha
+          <input id="m3-alpha" type="number" value="15" min="0.1" step="0.5"
+                 class="mt-1 block w-32 border rounded px-2 py-1">
+        </label>
+      </div>
+      <div class="mt-3 flex items-center gap-3">
+        <button id="m3-jalan" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm disabled:opacity-40" disabled>Sisip &amp; Uji (JPEG50/Noise/Crop)</button>
+        <span id="m3-status" class="text-sm text-slate-500">Unggah citra AI dulu.</span>
+      </div>
+      <div id="m3-hasil" class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+      <div class="mt-3 text-sm overflow-x-auto">
+        <table class="border-collapse border text-sm">
+          <thead><tr class="bg-slate-100">
+            <th class="border px-2 py-1">Serangan</th><th class="border px-2 py-1">NC (AI, live)</th>
+            <th class="border px-2 py-1">NC rata-rata 3 citra (XLSX)</th><th class="border px-2 py-1">Selisih</th>
+          </tr></thead>
+          <tbody id="m3-banding"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
 </main>
 
 <script>
@@ -160,16 +213,21 @@
 // Tab switcher (tidak mereset state masing-masing mode).
 const tab1 = document.getElementById("tab-mode1");
 const tab2 = document.getElementById("tab-mode2");
+const tab3 = document.getElementById("tab-mode3");
 const panel1 = document.getElementById("panel-mode1");
 const panel2 = document.getElementById("panel-mode2");
-function pilihTab(keMode1) {
-  panel1.classList.toggle("hidden", !keMode1);
-  panel2.classList.toggle("hidden", keMode1);
-  tab1.className = "px-4 py-1 rounded font-semibold " + (keMode1 ? "bg-emerald-600" : "bg-slate-700");
-  tab2.className = "px-4 py-1 rounded font-semibold " + (keMode1 ? "bg-slate-700" : "bg-emerald-600");
+const panel3 = document.getElementById("panel-mode3");
+const SEMUA_TAB = [[tab1, panel1], [tab2, panel2], [tab3, panel3]];
+function pilihTab(nomor) {
+  SEMUA_TAB.forEach(([tab, panel], i) => {
+    const aktif = (i + 1) === nomor;
+    panel.classList.toggle("hidden", !aktif);
+    tab.className = "px-4 py-1 rounded font-semibold " + (aktif ? "bg-emerald-600" : "bg-slate-700");
+  });
 }
-tab1.addEventListener("click", () => pilihTab(true));
-tab2.addEventListener("click", () => pilihTab(false));
+tab1.addEventListener("click", () => pilihTab(1));
+tab2.addEventListener("click", () => pilihTab(2));
+tab3.addEventListener("click", () => pilihTab(3));
 
 // Pembantu umum.
 async function kirim(url, formData) {
@@ -203,7 +261,8 @@ function fmtPsnr(psnr) {
 
 // ---------- MODE 1 ----------
 const S1 = { cover: null, stego: null, nbit: 0, wmMode: "teks", teks: "", logo: null,
-             logoW: 0, logoH: 0, key: "", alpha: 15, stegoW: 0, stegoH: 0, psnrEmbed: null };
+             logoW: 0, logoH: 0, key: "", alpha: 15, stegoW: 0, stegoH: 0, psnrEmbed: null,
+             skema: "nonblind" };
 const m1Cover = document.getElementById("m1-cover");
 const m1Key = document.getElementById("m1-key");
 const m1Teks = document.getElementById("m1-teks");
@@ -213,6 +272,7 @@ const m1Sisip = document.getElementById("m1-sisip");
 const m1Status = document.getElementById("m1-status");
 const m1Hasil = document.getElementById("m1-hasil");
 const m1Semua = document.getElementById("m1-semua");
+const m1KeM2 = document.getElementById("m1-kem2");
 const btnSerang = document.querySelectorAll(".btn-serang");
 
 // Kunci tombol Mode 1 selama request berjalan agar klik beruntun tidak
@@ -220,8 +280,34 @@ const btnSerang = document.querySelectorAll(".btn-serang");
 function setSibukM1(sibuk) {
   m1Sisip.disabled = sibuk || !S1.cover;
   m1Semua.disabled = sibuk || !S1.stego;
+  m1KeM2.disabled = sibuk || !S1.stego;
   btnSerang.forEach(t => t.disabled = sibuk || !S1.stego);
 }
+
+// Salin parameter sesi Mode 1 ke form Mode 2 (file citra browser tidak
+// boleh diisi program — pengguna tetap mengunggah 2 citra manual).
+m1KeM2.addEventListener("click", () => {
+  if (!S1.stego) return;
+  document.getElementById("m2-key").value = S1.key;
+  document.getElementById("m2-nbit").value = S1.nbit;
+  document.getElementById("m2-alpha").value = S1.alpha;
+  document.querySelector('input[name="m2-skema"][value="' +
+    (S1.skema === "blind" ? "blind" : "nonblind") + '"]').checked = true;
+  document.querySelector('input[name="m2-skema"][value="' +
+    (S1.skema === "blind" ? "blind" : "nonblind") + '"]').dispatchEvent(new Event("change"));
+  const modeLogo = S1.wmMode === "logo";
+  document.querySelector('input[name="m2-wmmode"][value="' + S1.wmMode + '"]').checked = true;
+  document.querySelector('input[name="m2-wmmode"][value="' + S1.wmMode + '"]').dispatchEvent(new Event("change"));
+  if (!modeLogo) document.getElementById("m2-teks").value = S1.teks;
+  else {
+    document.getElementById("m2-logow").value = S1.logoW;
+    document.getElementById("m2-logoh").value = S1.logoH;
+  }
+  pilihTab(2);
+  document.getElementById("m2-status").textContent =
+    "Parameter tersalin (kunci, " + S1.nbit + " bit, alpha). Tinggal unggah 2 citra" +
+    (modeLogo ? " + logo pembanding." : ".");
+});
 
 document.querySelectorAll('input[name="m1-wmmode"]').forEach(r => r.addEventListener("change", () => {
   const modeLogo = document.querySelector('input[name="m1-wmmode"]:checked').value === "logo";
@@ -250,6 +336,7 @@ m1Cover.addEventListener("change", () => {
 m1Sisip.addEventListener("click", async () => {
   if (!S1.cover) return;
   S1.wmMode = document.querySelector('input[name="m1-wmmode"]:checked').value;
+  S1.skema = document.querySelector('input[name="m1-skema"]:checked').value;
   S1.key = m1Key.value.trim();
   S1.alpha = parseFloat(m1Alpha.value) || 15;
   S1.teks = m1Teks.value.trim();
@@ -266,7 +353,8 @@ m1Sisip.addEventListener("click", async () => {
   m1Status.textContent = "Menyisipkan … (DCT murni, mohon tunggu)";
   setSibukM1(true);
   try {
-    const d = await kirim("/api/watermark/embed", fd);
+    const urlEmbed = S1.skema === "blind" ? "/api/watermark/embed-blind" : "/api/watermark/embed";
+    const d = await kirim(urlEmbed, fd);
     S1.stego = base64KeBlob(d.stego_base64);
     S1.nbit = d.jumlah_bit;
     S1.logoW = d.lebar_logo; S1.logoH = d.tinggi_logo;
@@ -280,7 +368,10 @@ m1Sisip.addEventListener("click", async () => {
     m1Hasil.innerHTML = "";
     btnSerang.forEach(t => t.disabled = false);
     m1Semua.disabled = false;
+    m1KeM2.disabled = false;
     m1Status.textContent = "Tersisip: " + d.jumlah_bit + " bit (" + d.mode + "). Silakan serang.";
+    m1Status.textContent += " Catat untuk Verifikasi: skema=" + S1.skema + ", jumlah_bit=" + d.jumlah_bit +
+      ", alpha=" + S1.alpha + (S1.wmMode === "teks" ? ", teks='" + S1.teks + "'" : ", logo + dimensi " + S1.logoW + "x" + S1.logoH) + ".";
   } catch (e) {
     m1Status.textContent = "Gagal: " + e.message;
   } finally {
@@ -290,10 +381,11 @@ m1Sisip.addEventListener("click", async () => {
 
 function fdEkstrak(blobSerang) {
   const fd = new FormData();
-  fd.append("citra_asli", S1.cover);
+  const blind = S1.skema === "blind";
+  if (!blind) fd.append("citra_asli", S1.cover);
   fd.append("citra_input", blobSerang, "serangan.png");
   fd.append("key", S1.key);
-  fd.append("alpha", S1.alpha);
+  if (!blind) fd.append("alpha", S1.alpha);
   fd.append("jumlah_bit", S1.nbit);
   if (S1.wmMode === "teks") fd.append("teks_asli", S1.teks);
   else {
@@ -301,7 +393,7 @@ function fdEkstrak(blobSerang) {
     fd.append("lebar_logo", S1.logoW);
     fd.append("tinggi_logo", S1.logoH);
   }
-  return fd;
+  return { fd, url: blind ? "/api/watermark/extract-blind" : "/api/watermark/extract" };
 }
 
 function kartuHasil(nama, psnr, b64, ekstraksi) {
@@ -341,7 +433,8 @@ async function serangDanEkstrak(jenis) {
   }
   let ekstraksi = null;
   try {
-    ekstraksi = await kirim("/api/watermark/extract", fdEkstrak(base64KeBlob(data.citra_base64)));
+    const ex = fdEkstrak(base64KeBlob(data.citra_base64));
+    ekstraksi = await kirim(ex.url, ex.fd);
     if (ekstraksi.nc === undefined) {
       ekstraksi = { galat: "Backend tidak mengembalikan NC." };
     } else {
@@ -385,7 +478,8 @@ m1Semua.addEventListener("click", async () => {
     for (const h of paket.hasil) {
       let ekstraksi = null;
       try {
-        ekstraksi = await kirim("/api/watermark/extract", fdEkstrak(base64KeBlob(h.citra_base64)));
+        const ex = fdEkstrak(base64KeBlob(h.citra_base64));
+        ekstraksi = await kirim(ex.url, ex.fd);
         if (ekstraksi.nc === undefined) ekstraksi = { galat: "Backend tidak mengembalikan NC." };
       } catch (e) {
         ekstraksi = { galat: e.message };
@@ -401,6 +495,10 @@ m1Semua.addEventListener("click", async () => {
 });
 
 // ---------- MODE 2 ----------
+document.querySelectorAll('input[name="m2-skema"]').forEach(r => r.addEventListener("change", () => {
+  const blind = document.querySelector('input[name="m2-skema"]:checked').value === "blind";
+  document.getElementById("m2-asli").closest("label").classList.toggle("hidden", blind);
+}));
 document.querySelectorAll('input[name="m2-wmmode"]').forEach(r => r.addEventListener("change", () => {
   const modeLogo = document.querySelector('input[name="m2-wmmode"]:checked').value === "logo";
   document.getElementById("m2-teks").classList.toggle("hidden", modeLogo);
@@ -412,19 +510,26 @@ document.getElementById("m2-verifikasi").addEventListener("click", async () => {
   const asli = document.getElementById("m2-asli").files[0];
   const tersangka = document.getElementById("m2-tersangka").files[0];
   const key = document.getElementById("m2-key").value.trim();
-  const nbit = parseInt(document.getElementById("m2-nbit").value, 10);
+  const nbitMentah = document.getElementById("m2-nbit").value.trim();
+  const nbit = /^\d+$/.test(nbitMentah) ? parseInt(nbitMentah, 10) : NaN;
   const alpha = parseFloat(document.getElementById("m2-alpha").value) || 15;
   const modeLogo = document.querySelector('input[name="m2-wmmode"]:checked').value === "logo";
+  const blind = document.querySelector('input[name="m2-skema"]:checked').value === "blind";
   const status = document.getElementById("m2-status");
   const hasil = document.getElementById("m2-hasil");
-  if (!asli || !tersangka) { status.textContent = "Unggah kedua citra dulu."; return; }
+  if (!tersangka) { status.textContent = "Unggah citra tersangka dulu."; return; }
+  if (!blind && !asli) { status.textContent = "Unggah citra asli dulu (atau pilih skema Blind)."; return; }
   if (!key) { status.textContent = "Isi kunci dulu."; return; }
-  if (!nbit || nbit < 1) { status.textContent = "Isi jumlah bit dulu."; return; }
+  if (!nbit || nbit < 1) {
+    status.textContent = "Jumlah bit harus bilangan BULAT (mis. 72 dari status Sisipkan — bukan PSNR 46.13).";
+    return;
+  }
   const fd = new FormData();
-  fd.append("citra_asli", asli);
+  const urlVer = blind ? "/api/watermark/extract-blind" : "/api/watermark/extract";
+  if (!blind) fd.append("citra_asli", asli);
   fd.append("citra_input", tersangka);
   fd.append("key", key);
-  fd.append("alpha", alpha);
+  if (!blind) fd.append("alpha", alpha);
   fd.append("jumlah_bit", nbit);
   if (modeLogo) {
     const logo = document.getElementById("m2-logo").files[0];
@@ -442,7 +547,7 @@ document.getElementById("m2-verifikasi").addEventListener("click", async () => {
   const btnVer = document.getElementById("m2-verifikasi");
   btnVer.disabled = true;
   try {
-    const d = await kirim("/api/watermark/extract", fd);
+    const d = await kirim(urlVer, fd);
     let html = "";
     if (d.watermark_base64) {
       html += '<p class="font-medium mb-1">Watermark hasil ekstraksi:</p>' +
@@ -458,6 +563,98 @@ document.getElementById("m2-verifikasi").addEventListener("click", async () => {
     status.textContent = "Gagal: " + e.message;
   } finally {
     btnVer.disabled = false;
+  }
+});
+
+// ---------- MODE 3 (pengayaan §5) ----------
+// Nilai acuan = rata-rata 3 citra utama dari hasil_pengujian.xlsx (statis).
+const M3_ACUAN = {
+  "jpeg_50": { nc: 0.4762, label: "JPEG 50" },
+  "noise": { nc: 0.9083, label: "Noise" },
+  "crop": { nc: 0.8640, label: "Crop 25%" }
+};
+const S3 = { cover: null, key: "", alpha: 15 };
+const m3Cover = document.getElementById("m3-cover");
+const m3Jalan = document.getElementById("m3-jalan");
+const m3Status = document.getElementById("m3-status");
+m3Cover.addEventListener("change", () => {
+  S3.cover = m3Cover.files[0] || null;
+  m3Jalan.disabled = !S3.cover;
+  m3Status.textContent = S3.cover ? ("Siap: " + S3.cover.name) : "Unggah citra AI dulu.";
+});
+document.getElementById("m3-acapkunci").addEventListener("click", () => {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  document.getElementById("m3-key").value =
+    Array.from(b).map(x => x.toString(16).padStart(2, "0")).join("");
+});
+m3Jalan.addEventListener("click", async () => {
+  if (!S3.cover) return;
+  S3.key = document.getElementById("m3-key").value.trim();
+  S3.alpha = parseFloat(document.getElementById("m3-alpha").value) || 15;
+  if (!S3.key) { m3Status.textContent = "Isi kunci dulu."; return; }
+  m3Jalan.disabled = true;
+  document.getElementById("m3-hasil").innerHTML = "";
+  document.getElementById("m3-banding").innerHTML = "";
+  try {
+    // Logo acuan diunduh dari server agar watermark identik dengan matriks
+    // XLSX (logo pola 32x32) — perbandingan apel-vs-apel.
+    m3Status.textContent = "Mengambil logo acuan …";
+    const logoResp = await fetch("/api/aset/logo-pola");
+    if (!logoResp.ok) throw new Error("Logo acuan tak-tersedia (HTTP " + logoResp.status + ").");
+    const logoBlob = await logoResp.blob();
+    const fdE = new FormData();
+    fdE.append("berkas", S3.cover);
+    fdE.append("key", S3.key);
+    fdE.append("alpha", S3.alpha);
+    fdE.append("logo", logoBlob, "logo_pola_32x32.png");
+    m3Status.textContent = "Menyisipkan … (DCT murni, mohon tunggu)";
+    const emb = await kirim("/api/watermark/embed", fdE);
+    const stego = base64KeBlob(emb.stego_base64);
+    m3Status.textContent = "PSNR embed " + fmtPsnr(emb.psnr) + " — menyerang …";
+    const hasilRow = document.getElementById("m3-hasil");
+    const banding = document.getElementById("m3-banding");
+    for (const jenis of ["jpeg_50", "noise", "crop"]) {
+      const fdA = new FormData();
+      fdA.append("berkas", stego, "stego.png");
+      let data;
+      if (jenis === "jpeg_50") {
+        fdA.append("kualitas", "50");
+        data = await kirim("/api/attack/jpeg", fdA);
+      } else {
+        fdA.append("jenis", jenis);
+        data = await kirim("/api/attack/manipulation", fdA);
+      }
+      const fdX = new FormData();
+      fdX.append("citra_asli", S3.cover);
+      fdX.append("citra_input", base64KeBlob(data.citra_base64), "serangan.png");
+      fdX.append("key", S3.key);
+      fdX.append("alpha", S3.alpha);
+      fdX.append("jumlah_bit", emb.jumlah_bit);
+      fdX.append("logo_asli", logoBlob, "logo_pola_32x32.png");
+      fdX.append("lebar_logo", emb.lebar_logo);
+      fdX.append("tinggi_logo", emb.tinggi_logo);
+      let eks;
+      try {
+        eks = await kirim("/api/watermark/extract", fdX);
+      } catch (e) {
+        eks = { galat: e.message };
+      }
+      hasilRow.appendChild(kartuHasil(M3_ACUAN[jenis].label + " (AI)", data.psnr, data.citra_base64, eks));
+      const acuan = M3_ACUAN[jenis].nc;
+      const selisih = (eks.nc !== undefined) ? (Number(eks.nc) - acuan).toFixed(4) : "—";
+      const tr = document.createElement("tr");
+      tr.innerHTML = "<td class='border px-2 py-1'>" + M3_ACUAN[jenis].label + "</td>" +
+        "<td class='border px-2 py-1 font-mono'>" + (eks.nc !== undefined ? Number(eks.nc).toFixed(4) : "tak-tersinkron") + "</td>" +
+        "<td class='border px-2 py-1 font-mono'>" + acuan.toFixed(4) + "</td>" +
+        "<td class='border px-2 py-1 font-mono'>" + selisih + "</td>";
+      banding.appendChild(tr);
+    }
+    m3Status.textContent = "Selesai.";
+  } catch (e) {
+    m3Status.textContent = "Gagal: " + e.message;
+  } finally {
+    m3Jalan.disabled = !S3.cover;
   }
 });
 </script>

@@ -50,7 +50,7 @@ Global prefix: **`/api`**.
 
 ### 3.1 Detail `/api/watermark/extract` — Satu Endpoint, Dua Mode Pemakaian
 
-Ekstraksi pada cakupan fitur wajib bersifat **non-blind** (butuh citra asli sebagai pembanding). Mode *blind* (tanpa citra asli) adalah fitur pengayaan yang belum dikerjakan — prioritas rendah, sesuai kesepakatan sebelumnya untuk fokus ke fitur wajib dulu.
+Ekstraksi pada cakupan fitur wajib bersifat **non-blind** (butuh citra asli sebagai pembanding). Mode *blind* (tanpa citra asli) tersedia sebagai skema cadangan terpisah — lihat §3.2.
 
 **Request** (`multipart/form-data`):
 
@@ -77,6 +77,21 @@ Ekstraksi pada cakupan fitur wajib bersifat **non-blind** (butuh citra asli seba
 | (b) Verifikasi Kepemilikan (mandiri) | Panel "Verifikasi Kepemilikan" di frontend, dipicu manual | Diunggah manual oleh pengguna | Citra "tersangka" — bisa diunduh dari media sosial, tidak berasal dari sesi yang sama |
 
 Mode (b) inilah yang menjawab skenario riil di BAB I: jurnalis menyimpan citra aslinya sendiri, lalu suatu waktu menemukan foto yang diduga miliknya beredar tanpa atribusi — keduanya diunggah untuk dibuktikan.
+
+### 3.2 Skema Blind (cadangan, pengayaan)
+
+Skema terpisah yang terbaca **tanpa citra asli**: bit = tanda selisih dua
+koefisien mid-freq dalam blok yang sama (`F(2,3)−F(3,2) ≥ +alpha` → 1).
+Tidak saling baca dengan skema non-blind (koefisien & logika beda).
+
+| Verb | Path | Keterangan |
+|------|------|------------|
+| POST | `/api/watermark/embed-blind` | Sisip blind (teks/logo) + PSNR awal |
+| POST | `/api/watermark/extract-blind` | Ekstrak blind: hanya `citra_input` + `key` + `jumlah_bit` (+ pembanding untuk NC/BER) |
+
+Konsekuensi jujur: tanpa spreading-gain, ketahanan di bawah non-blind —
+cadangan saat citra asli hilang, bukan pengganti utama. Di UI: radio skema
+Non-blind/Blind di Mode 1 (Sisip) dan Mode 2 (Verifikasi).
 
 ---
 

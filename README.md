@@ -4,14 +4,14 @@ Aplikasi web untuk menyisipkan watermark tak kasat mata (*invisible watermark*) 
 
 Dibuat untuk Tugas Proyek Keamanan Informasi, Universitas Siliwangi (Topik C — Digital Watermarking, tenggat 30 September 2026).
 
-> Status saat ini: slice **uji serangan + PSNR sudah hidup**. Endpoint sisip/ekstrak watermark (`/api/watermark/embed`, `/api/watermark/extract`) menyusul setelah logika spread-spectrum di `watermark_engine.py` selesai.
+> Status: seluruh fitur hidup — sisip/ekstrak non-blind + blind, 8 serangan + PSNR/NC/BER, UI 3 tab, matriks uji hijau (lihat `hasil_pengujian.md`).
 
 ## Fitur
 
-1. **Penyisipan robust** — watermark (logo biner/teks) disisipkan via DCT blok 8x8 + spread spectrum (*dalam pengerjaan*).
-2. **Simulasi serangan** — kompresi JPEG (kualitas 90/70/50), Gaussian noise, crop tengah, resize, kontras, dan gabungan Q50+noise+crop.
-3. **Kalkulasi metrik** — PSNR otomatis tiap serangan; NC & BER untuk logo hasil ekstraksi (*menyusul bersama endpoint extract*).
-4. **UI demo satu halaman** — unggah citra → klik tombol serangan → lihat citra rusak + skor PSNR (dB).
+1. **Penyisipan robust** — watermark (logo biner/teks) disisipkan via DCT blok 8x8: spread spectrum non-blind + skema blind cadangan (tanda selisih koefisien, terbaca tanpa citra asli).
+2. **Simulasi serangan** — kompresi JPEG (kualitas 90/70/50), Gaussian noise, crop tengah 25% (snap grid 8px), resize, kontras + kecerahan, dan gabungan Q50+noise+crop.
+3. **Kalkulasi metrik** — PSNR tiap serangan; NC & BER otomatis via ekstraksi (non-blind toleran-crop / blind).
+4. **UI 3 tab** — Sisip & Uji Serangan (NC/BER otomatis + dashboard), Verifikasi Kepemilikan mandiri, Watermark di Citra AI (pengayaan §5).
 
 ## Struktur Proyek
 
@@ -55,7 +55,7 @@ venv\Scripts\activate
 pip install -r backend/requirements.txt
 ```
 
-Isi `backend/requirements.txt`: `fastapi`, `uvicorn`, `python-multipart`, `Pillow`, `numpy`.
+Isi `backend/requirements.txt`: `fastapi`, `uvicorn`, `python-multipart`, `Pillow`, `numpy`, `openpyxl`, `pytest`.
 
 ## Cara Menjalankan
 
@@ -76,7 +76,7 @@ Lalu buka **http://127.0.0.1:8000** di browser.
 
 1. Buka `http://127.0.0.1:8000`.
 2. Bagian **1. Unggah Citra** — pilih file gambar (JPG/PNG).
-3. Bagian **2. Serangan Satuan** — klik mis. `JPEG 50`, `Noise`, `Crop 20%`, atau `Gabungan Q50+Noise+Crop`.
+3. Bagian **2. Serang Stego** — klik mis. `JPEG 50`, `Noise`, `Crop 25%`, atau `Gabungan Q50+Noise+Crop` (NC/BER + watermark terekstrak muncul otomatis).
 4. Bagian **3. Hasil & PSNR** — citra hasil + skor `PSNR: xx.xx dB` muncul sebagai kartu. Atau klik **Jalankan Semua Serangan** untuk paket lengkap sekaligus.
 
 ### Via API (curl / docs interaktif)
@@ -101,11 +101,14 @@ Semua endpoint API mengembalikan JSON; citra hasil dikirim sebagai string `citra
 
 | Verb | Path | Keterangan |
 |------|------|------------|
-| GET | `/` | Halaman UI (`frontend/index.html`) |
+| GET | `/` | Halaman UI 3 tab (Sisip & Uji, Verifikasi, Watermark di Citra AI) |
+| POST | `/api/watermark/embed` | Sisip non-blind teks/logo + PSNR awal |
+| POST | `/api/watermark/extract` | Ekstrak non-blind + NC/BER bila pembanding diberi |
+| POST | `/api/watermark/embed-blind` | Sisip blind (cadangan tanpa citra asli) + PSNR |
+| POST | `/api/watermark/extract-blind` | Ekstrak blind + NC/BER bila pembanding diberi |
 | POST | `/api/attack/jpeg` | Kompresi JPEG (`kualitas`: 90/70/50) + PSNR |
 | POST | `/api/attack/manipulation` | Satu manipulasi (`jenis`: noise/crop/resize/kontras/gabungan) + PSNR |
 | POST | `/api/attack/semua` | Seluruh paket serangan + PSNR tiap hasil |
-| POST | `/api/watermark/embed`, `/api/watermark/extract` | *Menyusul* |
 
 ## Anggota Kelompok
 

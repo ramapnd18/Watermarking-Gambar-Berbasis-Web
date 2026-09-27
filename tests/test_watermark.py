@@ -17,6 +17,7 @@ from backend.attacker import kompresi_jpeg
 from backend.evaluator import hitung_psnr, hitung_nc, hitung_ber
 from backend.watermark_engine import (
     sisip_watermark, ekstrak_watermark, teks_ke_bit,
+    sisip_watermark_blind, ekstrak_watermark_blind,
 )
 
 BIT_UJI = teks_ke_bit("UNITEST!")
@@ -52,3 +53,21 @@ def test_psnr_citra_identik_tak_hingga():
     """Dua citra identik -> PSNR inf (UJI §4 test 6 opsional)."""
     cover = _cover_mungil()
     assert hitung_psnr(cover, cover) == float("inf")
+
+
+def test_blind_tanpa_citra_asli():
+    """Skema blind: sisip -> ekstrak HANYA dari stego, NC ~= 1.0."""
+    cover = _cover_mungil()
+    stego = sisip_watermark_blind(cover, BIT_UJI, KUNCI, alpha=15.0, jumlah_proses=1)
+    assert hitung_psnr(cover, stego) > 30.0
+    hasil = ekstrak_watermark_blind(stego, KUNCI, len(BIT_UJI), jumlah_proses=1)
+    assert hitung_nc(BIT_UJI, hasil) >= 0.99
+    assert hitung_ber(BIT_UJI, hasil) == 0.0
+
+
+def test_blind_tidak_saling_baca_dengan_nonblind():
+    """Dua skema tidak saling baca: ekstrak blind atas stego non-blind ~= acak."""
+    cover = _cover_mungil()
+    stego = sisip_watermark(cover, BIT_UJI, KUNCI, alpha=15.0, jumlah_proses=1)
+    hasil = ekstrak_watermark_blind(stego, KUNCI, len(BIT_UJI), jumlah_proses=1)
+    assert hitung_nc(BIT_UJI, hasil) < 0.9

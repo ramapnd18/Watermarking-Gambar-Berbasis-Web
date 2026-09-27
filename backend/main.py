@@ -32,6 +32,7 @@ try:
     from backend.watermark_engine import (
         sisip_watermark, ekstrak_watermark, teks_ke_bit, bit_ke_teks,
         logo_ke_bit, bit_ke_logo, ALPHA_DEFAULT,
+        sisip_watermark_blind, ekstrak_watermark_blind,
     )
 except ImportError:  # pragma: no cover — dijalankan sebagai skrip langsung
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -44,6 +45,7 @@ except ImportError:  # pragma: no cover — dijalankan sebagai skrip langsung
     from watermark_engine import (
         sisip_watermark, ekstrak_watermark, teks_ke_bit, bit_ke_teks,
         logo_ke_bit, bit_ke_logo, ALPHA_DEFAULT,
+        sisip_watermark_blind, ekstrak_watermark_blind,
     )
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -145,6 +147,16 @@ async def halaman_utama():
 async def cek_sehat():
     """Health-check ringan untuk monitoring/tunnel (selalu 200 bila hidup)."""
     return {"status": "ok"}
+
+
+@app.get("/api/aset/logo-pola")
+async def unduh_logo_pola():
+    """Menyajikan logo pola 32x32 acuan agar Mode 3 memakai watermark identik
+    dengan matriks XLSX (perbandingan apel-vs-apel)."""
+    berkas = DIREKTORI_DEPAN.parent / "assets" / "logo_pola_32x32.png"
+    if not berkas.exists():
+        return _tanggapan_galat("Logo acuan tidak ditemukan.", 404)
+    return FileResponse(str(berkas), media_type="image/png")
 
 
 # ---------------------------------------------------------------------------
@@ -312,16 +324,6 @@ async def ekstrak(
                 ekstrak_watermark, asli, uji, key, jumlah_bit, alpha)
     except ValueError as eronya:
         return _tanggapan_galat(str(eronya))
-    tanggapan: dict = {"jumlah_bit": len(bit_hasil)}
-    if lebar_logo > 0 and tinggi_logo > 0:
-        try:
-            tanggapan["watermark_base64"] = _ke_base64(
-                bit_ke_logo(bit_hasil, lebar_logo, tinggi_logo))
-        except ValueError as eronya:
-            return _tanggapan_galat(str(eronya))
-    if len(bit_hasil) % 8 == 0:
-        tanggapan["teks_hasil"] = bit_ke_teks(bit_hasil)
-    # NC/BER hanya bila pembanding asli disertakan (satu tugas tambahan).
     bit_acuan = None
     if teks_asli:
         try:
@@ -333,6 +335,21 @@ async def ekstrak(
             bit_acuan, _, _ = logo_ke_bit(await _baca_unggahan(logo_asli))
         except ValueError as eronya:
             return _tanggapan_galat(str(eronya))
+    return _tanggapan_ekstrak(bit_hasil, lebar_logo, tinggi_logo, bit_acuan)
+
+
+def _tanggapan_ekstrak(bit_hasil: list, lebar_logo: int, tinggi_logo: int,
+                       bit_acuan: list | None) -> dict | JSONResponse:
+    """Menyusun respons ekstraksi (dipakai skema non-blind & blind)."""
+    tanggapan: dict = {"jumlah_bit": len(bit_hasil)}
+    if lebar_logo > 0 and tinggi_logo > 0:
+        try:
+            tanggapan["watermark_base64"] = _ke_base64(
+                bit_ke_logo(bit_hasil, lebar_logo, tinggi_logo))
+        except ValueError as eronya:
+            return _tanggapan_galat(str(eronya))
+    if len(bit_hasil) % 8 == 0:
+        tanggapan["teks_hasil"] = bit_ke_teks(bit_hasil)
     if bit_acuan is not None:
         if len(bit_acuan) != len(bit_hasil):
             return _tanggapan_galat(
@@ -345,3 +362,82 @@ async def ekstrak(
         tanggapan["ber"] = ber
         tanggapan["status_kepemilikan"] = _status_kepemilikan(nc)
     return tanggapan
+
+
+@app.post("/api/watermark/embed-blind")
+async def sisip_blind(
+    berkas: UploadFile = File(..., description="Citra cover"),
+    key: str = Form(..., description="Kunci rahasia (tidak disimpan server)"),
+    alpha: float = Form(ALPHA_DEFAULT, description="Kekuatan sisipan > 0"),
+    teks: str = Form("", description="Teks watermark (isi salah satu: teks/logo)"),
+    logo: UploadFile | None = File(None, description="Logo biner (opsional)"),
+):
+    """Menyisipkan watermark skema BLIND (terbaca tanpa citra asli) + PSNR.
+
+    Skema terpisah dari /embed (tidak saling baca): bit = tanda selisih dua
+    koefisien dalam blok yang sama. Cadangan bila citra asli hilang.
+    """
+    ada_teks = bool(teks and teks.strip())
+    ada_logo = logo is not None and logo.filename
+    if ada_teks == bool(ada_logo):
+        return _tanggapan_galat(
+            "Isi tepat satu: 'teks' untuk watermark teks, atau unggah 'logo' "
+            "untuk watermark logo biner."
+        )
+    try:
+        cover = await _baca_unggahan(berkas)
+        if ada_teks:
+            bit = teks_ke_bit(teks.strip())
+            mode, lebar_logo, tinggi_logo = "teks", 0, 0
+        else:
+            logo_pil = await _baca_unggahan(logo)
+            bit, lebar_logo, tinggi_logo = logo_ke_bit(logo_pil)
+            mode = "logo"
+        async with KUNCI_BERAT:
+            stego = await asyncio.to_thread(sisip_watermark_blind, cover, bit, key, alpha)
+    except ValueError as eronya:
+        return _tanggapan_galat(str(eronya))
+    psnr = hitung_psnr(cover, stego)
+    return {
+        "mode": mode,
+        "skema": "blind",
+        "jumlah_bit": len(bit),
+        "lebar_logo": lebar_logo,
+        "tinggi_logo": tinggi_logo,
+        "psnr": psnr if psnr != float("inf") else "inf",
+        "lebar": stego.width,
+        "tinggi": stego.height,
+        "stego_base64": _ke_base64(stego),
+    }
+
+
+@app.post("/api/watermark/extract-blind")
+async def ekstrak_blind(
+    citra_input: UploadFile = File(..., description="Citra yang diekstrak (tanpa perlu asli)"),
+    key: str = Form(..., description="Kunci yang dipakai saat penyisipan"),
+    jumlah_bit: int = Form(..., description="Panjang watermark dalam bit"),
+    lebar_logo: int = Form(0, description="Lebar logo (0 bila mode teks)"),
+    tinggi_logo: int = Form(0, description="Tinggi logo (0 bila mode teks)"),
+    teks_asli: str = Form("", description="Teks asli pembanding (mode teks)"),
+    logo_asli: UploadFile | None = File(None, description="Logo asli pembanding (mode logo)"),
+):
+    """Mengekstrak watermark skema BLIND tanpa citra asli + NC/BER pembanding."""
+    try:
+        uji = await _baca_unggahan(citra_input)
+        async with KUNCI_BERAT:
+            bit_hasil = await asyncio.to_thread(
+                ekstrak_watermark_blind, uji, key, jumlah_bit)
+    except ValueError as eronya:
+        return _tanggapan_galat(str(eronya))
+    bit_acuan = None
+    if teks_asli:
+        try:
+            bit_acuan = teks_ke_bit(teks_asli)
+        except ValueError as eronya:
+            return _tanggapan_galat(str(eronya))
+    elif logo_asli is not None and logo_asli.filename:
+        try:
+            bit_acuan, _, _ = logo_ke_bit(await _baca_unggahan(logo_asli))
+        except ValueError as eronya:
+            return _tanggapan_galat(str(eronya))
+    return _tanggapan_ekstrak(bit_hasil, lebar_logo, tinggi_logo, bit_acuan)
