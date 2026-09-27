@@ -26,8 +26,8 @@
 ## 29 September — Simulasi Serangan & Evaluasi
 - [ ] Pembuatan endpoint serangan manipulasi gambar (Crop, Resize, Noise, Kontras).
 - [ ] Pengujian kompresi JPEG dengan parameter kualitas 90, 70, dan 50.
-- [ ] Implementasi algoritma kalkulasi kualitas citra (PSNR).
-- [ ] Implementasi algoritma perbandingan bit ekstraksi (NC dan BER).
+- [x] Implementasi algoritma kalkulasi kualitas citra (PSNR).
+- [x] Implementasi algoritma perbandingan bit ekstraksi (NC dan BER).
 
 ## 30 September — Finalisasi & Pelaporan (DEADLINE)
 - [ ] Penulisan dokumen PDF laporan teknis (6–12 halaman) dengan referensi format APA 7.

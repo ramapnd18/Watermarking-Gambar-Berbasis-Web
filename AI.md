@@ -57,8 +57,8 @@ pytest tests/                     # (Opsional) Jalankan unit test ekstraksi/metr
 | `dct_core.py` | Algoritma DCT & IDCT matematis (kalkulasi manual) | ✅ Selesai |
 | `watermark_engine.py` | Multiprocessing: pemecahan gambar ke blok 8x8 & spread spectrum | ✅ Selesai |
 | `security.py` | CSPRNG (`secrets`) untuk pseudo-noise sequence | ✅ Selesai |
-| `attacker.py` | Simulasi serangan (Pillow/PIL) | Belum mulai |
-| `evaluator.py` | Kalkulasi PSNR, NC, BER | Belum mulai |
+| `attacker.py` | Simulasi serangan (Pillow/PIL) | ✅ Selesai |
+| `evaluator.py` | Kalkulasi PSNR, NC, BER | ✅ Selesai |
 
 ---
 

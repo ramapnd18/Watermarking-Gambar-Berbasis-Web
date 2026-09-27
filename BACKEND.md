@@ -29,8 +29,8 @@ Global prefix: **`/api`**.
 | `dct_core.py` | Rumus matematis 2D-DCT & Inverse DCT (manual tanpa library) | ✅ Selesai |
 | `watermark_engine.py` | Memecah array NumPy menjadi blok 8x8, eksekusi `multiprocessing` | ✅ Selesai |
 | `security.py` | Men-generate *pseudo-noise sequence* dari seed/key | ✅ Selesai |
-| `attacker.py` | Menerapkan simulasi noise, resize, crop, kompresi JPEG | Belum mulai |
-| `evaluator.py` | Menghitung persamaan PSNR, NC, dan BER pasca-serangan | Belum mulai |
+| `attacker.py` | Menerapkan simulasi noise, resize, crop, kompresi JPEG | ✅ Selesai |
+| `evaluator.py` | Menghitung persamaan PSNR, NC, dan BER pasca-serangan | ✅ Selesai |
 
 ---
 
