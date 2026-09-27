@@ -6,9 +6,9 @@
       "type": "openai",
       "options": {
         "baseURL": "http://localhost:20128/v1",
-        "apiKey": "bebas-isi-apa-saja"
+        "apiKey": "sk-46133cc1cbe72381-1kumfs-b26a948c"
       }
     }
   },
-  "model": "9router/meta/muse-spark-1.3-contributor"
+  "model": "9router/oc/muse-spark-1.3-contributor-free"
 }

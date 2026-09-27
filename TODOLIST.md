@@ -20,8 +20,8 @@
 
 ## 28 September — API Integrasi & Antarmuka UI
 - [ ] Pembuatan endpoint FastAPI (`/api/watermark/embed` dan `/api/watermark/extract`).
-- [ ] Pembuatan UI Frontend (HTML + Tailwind) dengan panel *split-screen*.
-- [ ] Logika `fetch()` FormData dari UI ke FastAPI.
+- [x] Pembuatan UI Frontend (HTML + Tailwind) untuk demo serangan (panel citra asli vs hasil + dasbor PSNR).
+- [x] Logika `fetch()` FormData dari UI ke FastAPI.
 
 ## 29 September — Simulasi Serangan & Evaluasi
 - [ ] Pembuatan endpoint serangan manipulasi gambar (Crop, Resize, Noise, Kontras).
