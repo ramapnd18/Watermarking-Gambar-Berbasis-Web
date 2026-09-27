@@ -1,13 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "provider": {
-    "ollama": {
-      "name": "Ollama",
-      "type": "ollama",
+    "9router": {
+      "name": "9Router",
+      "type": "openai",
       "options": {
-        "baseURL": "http://localhost:11434/api"
+        "baseURL": "http://localhost:20128/v1",
+        "apiKey": "bebas-isi-apa-saja"
       }
     }
   },
-  "model": "ollama/qwen2.5-coder:7b"
+  "model": "9router/meta/muse-spark-1.3-contributor"
 }
