@@ -15,6 +15,14 @@
 
 <main class="max-w-6xl mx-auto p-6 space-y-6">
 
+  <!-- Peringatan server salah -->
+  <div id="peringatan-server" class="hidden bg-red-100 border border-red-400 text-red-800 text-sm rounded p-3">
+    Halaman ini dibuka lewat <b>Live Server :5500 / file langsung</b>, bukan lewat backend FastAPI.
+    API <code>/api/attack/...</code> tidak ada di sana sehingga muncul <b>405 Method Not Allowed</b>.<br>
+    Cara benar: jalankan <code>venv\Scripts\python main.py</code> lalu buka
+    <a class="underline font-semibold" href="http://127.0.0.1:8000">http://127.0.0.1:8000</a>.
+  </div>
+
   <!-- Unggah -->
   <section class="bg-white rounded shadow p-4">
     <h2 class="font-semibold mb-2">1. Unggah Citra</h2>
@@ -58,6 +66,14 @@
 </main>
 
 <script>
+// Peringatan dini bila dibuka bukan dari backend FastAPI (mis. Live Server :5500).
+(function () {
+  const el = document.getElementById("peringatan-server");
+  const dariServerSalah = location.protocol === "file:" ||
+    location.port === "5500" || location.port === "5501";
+  if (dariServerSalah && el) el.classList.remove("hidden");
+})();
+
 // State lokal: berkas asli dipakai ulang untuk tiap serangan (tanpa reload).
 let berkasAsli = null;
 
@@ -96,9 +112,21 @@ function kartuHasil(nama, psnr, base64) {
 }
 
 async function kirim(url, formData) {
-  const respon = await fetch(url, { method: "POST", body: formData });
-  const data = await respon.json();
-  if (!respon.ok) throw new Error(data.galat || ("HTTP " + respon.status));
+  let respon;
+  try {
+    respon = await fetch(url, { method: "POST", body: formData });
+  } catch (e) {
+    throw new Error("Tidak bisa menghubungi backend di " + location.origin +
+      " — pastikan 'venv\\Scripts\\python main.py' jalan lalu buka http://127.0.0.1:8000. (" + e.message + ")");
+  }
+  let data = {};
+  try { data = await respon.json(); } catch (e) { /* abaikan, ditangani di bawah */ }
+  if (!respon.ok) {
+    if (respon.status === 405) {
+      throw new Error("HTTP 405 — halaman ini dibuka lewat Live Server :5500/file, bukan backend. Tutup Live Server, jalankan 'venv\\Scripts\\python main.py', lalu buka http://127.0.0.1:8000.");
+    }
+    throw new Error(data.galat || ("HTTP " + respon.status));
+  }
   return data;
 }
 
