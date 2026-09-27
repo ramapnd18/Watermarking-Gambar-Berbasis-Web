@@ -3,14 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Uji Serangan Watermarking DCT</title>
+<title>Aplikasi Watermarking DCT</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
 
 <header class="bg-slate-900 text-white px-6 py-4">
-  <h1 class="text-xl font-bold">Uji Serangan Watermarking DCT</h1>
-  <p class="text-sm text-slate-300">Unggah citra &rarr; serang &rarr; lihat PSNR. Tahap sisip/ekstrak watermark menyusul.</p>
+  <h1 class="text-xl font-bold">Aplikasi Watermarking Gambar (DCT)</h1>
+  <p class="text-sm text-slate-300">Sisipkan watermark tak-kasatmata &rarr; uji ketahanan &rarr; verifikasi kepemilikan.</p>
+  <nav class="mt-3 flex gap-2 text-sm">
+    <button id="tab-mode1" class="px-4 py-1 rounded bg-emerald-600 font-semibold">Sisip &amp; Uji Serangan</button>
+    <button id="tab-mode2" class="px-4 py-1 rounded bg-slate-700">Verifikasi Kepemilikan</button>
+  </nav>
 </header>
 
 <main class="max-w-6xl mx-auto p-6 space-y-6">
@@ -18,159 +22,442 @@
   <!-- Peringatan server salah -->
   <div id="peringatan-server" class="hidden bg-red-100 border border-red-400 text-red-800 text-sm rounded p-3">
     Halaman ini dibuka lewat <b>Live Server :5500 / file langsung</b>, bukan lewat backend FastAPI.
-    API <code>/api/attack/...</code> tidak ada di sana sehingga muncul <b>405 Method Not Allowed</b>.<br>
+    API <code>/api/...</code> tidak ada di sana sehingga muncul <b>405 Method Not Allowed</b>.<br>
     Cara benar: jalankan <code>venv\Scripts\python main.py</code> lalu buka
     <a class="underline font-semibold" href="http://127.0.0.1:8000">http://127.0.0.1:8000</a>.
   </div>
 
-  <!-- Unggah -->
-  <section class="bg-white rounded shadow p-4">
-    <h2 class="font-semibold mb-2">1. Unggah Citra</h2>
-    <div class="flex flex-wrap items-center gap-3">
-      <input id="masukan-berkas" type="file" accept="image/*"
-             class="text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
-      <button id="tombol-semua" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm disabled:opacity-40" disabled>
-        Jalankan Semua Serangan
-      </button>
-      <span id="status" class="text-sm text-slate-500">Belum ada citra.</span>
-    </div>
-    <div class="mt-3">
-      <p class="text-sm font-medium mb-1">Citra asli:</p>
-      <img id="pratinjau-asli" class="max-h-64 rounded border hidden" alt="Citra asli">
-    </div>
-  </section>
+  <!-- ================= MODE 1 ================= -->
+  <div id="panel-mode1" class="space-y-6">
 
-  <!-- Tombol serangan satuan -->
-  <section class="bg-white rounded shadow p-4">
-    <h2 class="font-semibold mb-2">2. Serangan Satuan</h2>
-    <div class="flex flex-wrap gap-2 text-sm">
-      <button data-serang="jpeg-90" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>JPEG 90</button>
-      <button data-serang="jpeg-70" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>JPEG 70</button>
-      <button data-serang="jpeg-50" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>JPEG 50</button>
-      <button data-serang="noise" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Noise</button>
-      <button data-serang="crop" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Crop 20%</button>
-      <button data-serang="resize" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Resize</button>
-      <button data-serang="kontras" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Kontras</button>
-      <button data-serang="gabungan" class="btn-serang px-3 py-1 rounded bg-red-700 text-white disabled:opacity-40" disabled>Gabungan Q50+Noise+Crop</button>
-    </div>
-  </section>
+    <section class="bg-white rounded shadow p-4">
+      <h2 class="font-semibold mb-2">1. Sisipkan Watermark</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <label class="block">Citra cover (JPG/PNG)
+          <input id="m1-cover" type="file" accept="image/*"
+                 class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
+        </label>
+        <label class="block">Kunci rahasia (tidak disimpan server)
+          <span class="mt-1 flex gap-2">
+            <input id="m1-key" type="text" placeholder="ketik atau buat acak"
+                   class="flex-1 border rounded px-2 py-1">
+            <button id="m1-acapkunci" type="button" class="px-3 py-1 rounded bg-slate-600 text-white">Acak</button>
+          </span>
+        </label>
+        <div class="block">Jenis watermark<br>
+          <label class="mr-3"><input type="radio" name="m1-wmmode" value="teks" checked> Teks</label>
+          <label><input type="radio" name="m1-wmmode" value="logo"> Logo biner</label>
+          <input id="m1-teks" type="text" placeholder="teks watermark, mis. NAMA-NPM"
+                 class="mt-1 block w-full border rounded px-2 py-1">
+          <input id="m1-logo" type="file" accept="image/*"
+                 class="mt-1 hidden w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
+        </div>
+        <label class="block">Alpha (5 lemah / 15 sedang / 30 kuat)
+          <input id="m1-alpha" type="number" value="15" min="0.1" step="0.5"
+                 class="mt-1 block w-32 border rounded px-2 py-1">
+        </label>
+      </div>
+      <div class="mt-3 flex items-center gap-3">
+        <button id="m1-sisip" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm disabled:opacity-40" disabled>Sisipkan</button>
+        <span id="m1-status" class="text-sm text-slate-500">Unggah citra cover dulu.</span>
+      </div>
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><p class="text-sm font-medium mb-1">Cover:</p>
+          <img id="m1-pratinjau-cover" class="max-h-56 rounded border hidden" alt="Cover"></div>
+        <div><p class="text-sm font-medium mb-1">Stego (<span id="m1-psnr" class="font-mono text-emerald-700">PSNR: --</span>):</p>
+          <img id="m1-pratinjau-stego" class="max-h-56 rounded border hidden" alt="Stego"></div>
+      </div>
+    </section>
 
-  <!-- Hasil -->
-  <section class="bg-white rounded shadow p-4">
-    <h2 class="font-semibold mb-2">3. Hasil &amp; PSNR</h2>
-    <div id="hasil" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <p class="text-sm text-slate-400 col-span-full">Hasil serangan tampil di sini beserta skor PSNR (dB).</p>
-    </div>
-  </section>
+    <section class="bg-white rounded shadow p-4">
+      <h2 class="font-semibold mb-2">2. Serang Stego (NC/BER dihitung otomatis)</h2>
+      <div class="flex flex-wrap gap-2 text-sm">
+        <button data-serang="jpeg-90" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>JPEG 90</button>
+        <button data-serang="jpeg-70" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>JPEG 70</button>
+        <button data-serang="jpeg-50" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>JPEG 50</button>
+        <button data-serang="noise" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Noise</button>
+        <button data-serang="crop" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Crop 25%</button>
+        <button data-serang="resize" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Resize</button>
+        <button data-serang="kontras" class="btn-serang px-3 py-1 rounded bg-slate-700 text-white disabled:opacity-40" disabled>Kontras +20%</button>
+        <button data-serang="gabungan" class="btn-serang px-3 py-1 rounded bg-red-700 text-white disabled:opacity-40" disabled>Gabungan Q50+Noise+Crop</button>
+        <button id="m1-semua" class="px-3 py-1 rounded bg-emerald-600 text-white disabled:opacity-40" disabled>Jalankan Semua Serangan</button>
+      </div>
+    </section>
+
+    <section class="bg-white rounded shadow p-4">
+      <h2 class="font-semibold mb-2">3. Hasil Serangan + Ekstraksi</h2>
+      <div id="m1-hasil" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <p class="text-sm text-slate-400 col-span-full">Sisipkan watermark dulu, lalu klik tombol serangan.</p>
+      </div>
+    </section>
+
+    <footer class="sticky bottom-0 bg-slate-900 text-white rounded shadow px-4 py-2 text-sm flex flex-wrap gap-4">
+      <span>PSNR embed: <b id="m1-dash-psnr" class="font-mono">--</b></span>
+      <span>NC terakhir: <b id="m1-dash-nc" class="font-mono">--</b></span>
+      <span>BER terakhir: <b id="m1-dash-ber" class="font-mono">--</b></span>
+      <span>Status: <b id="m1-dash-status">--</b></span>
+    </footer>
+  </div>
+
+  <!-- ================= MODE 2 ================= -->
+  <div id="panel-mode2" class="hidden space-y-6">
+    <section class="bg-white rounded shadow p-4">
+      <h2 class="font-semibold mb-2">Verifikasi Kepemilikan (mandiri)</h2>
+      <p class="text-sm text-slate-500 mb-3">Unggah citra asli milik Anda + citra tersangka dari luar sistem, lalu verifikasi dengan kunci yang sama.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <label class="block">Citra asli (milik Anda)
+          <input id="m2-asli" type="file" accept="image/*"
+                 class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
+        </label>
+        <label class="block">Citra tersangka (temuan beredar)
+          <input id="m2-tersangka" type="file" accept="image/*"
+                 class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
+        </label>
+        <label class="block">Kunci saat penyisipan
+          <input id="m2-key" type="text" class="mt-1 block w-full border rounded px-2 py-1">
+        </label>
+        <label class="block">Jumlah bit watermark
+          <input id="m2-nbit" type="number" min="1" placeholder="lihat dari hasil Sisipkan"
+                 class="mt-1 block w-full border rounded px-2 py-1">
+        </label>
+        <div class="block">Pembanding<br>
+          <label class="mr-3"><input type="radio" name="m2-wmmode" value="teks" checked> Teks</label>
+          <label><input type="radio" name="m2-wmmode" value="logo"> Logo</label>
+          <input id="m2-teks" type="text" placeholder="teks asli pembanding"
+                 class="mt-1 block w-full border rounded px-2 py-1">
+          <span id="m2-logorow" class="hidden mt-1 flex gap-2 items-center">
+            <input id="m2-logo" type="file" accept="image/*"
+                   class="flex-1 text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
+            <input id="m2-logow" type="number" value="32" min="1" title="lebar logo" class="w-16 border rounded px-1 py-1">
+            <span class="text-slate-400">x</span>
+            <input id="m2-logoh" type="number" value="32" min="1" title="tinggi logo" class="w-16 border rounded px-1 py-1">
+          </span>
+        </div>
+        <label class="block">Alpha saat penyisipan
+          <input id="m2-alpha" type="number" value="15" min="0.1" step="0.5"
+                 class="mt-1 block w-32 border rounded px-2 py-1">
+        </label>
+      </div>
+      <div class="mt-3 flex items-center gap-3">
+        <button id="m2-verifikasi" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm">Verifikasi Kepemilikan</button>
+        <span id="m2-status" class="text-sm text-slate-500"></span>
+      </div>
+      <div id="m2-hasil" class="mt-3 text-sm"></div>
+    </section>
+  </div>
 
 </main>
 
 <script>
-// Peringatan dini bila dibuka bukan dari backend FastAPI (mis. Live Server :5500).
+// Peringatan bila dibuka bukan dari backend FastAPI (mis. Live Server :5500).
 (function () {
   const el = document.getElementById("peringatan-server");
-  const dariServerSalah = location.protocol === "file:" ||
+  const salah = location.protocol === "file:" ||
     location.port === "5500" || location.port === "5501";
-  if (dariServerSalah && el) el.classList.remove("hidden");
+  if (salah && el) el.classList.remove("hidden");
 })();
 
-// State lokal: berkas asli dipakai ulang untuk tiap serangan (tanpa reload).
-let berkasAsli = null;
-
-const masukanBerkas = document.getElementById("masukan-berkas");
-const pratinjauAsli = document.getElementById("pratinjau-asli");
-const tombolSemua = document.getElementById("tombol-semua");
-const statusEl = document.getElementById("status");
-const wadahHasil = document.getElementById("hasil");
-const tombolSerang = document.querySelectorAll(".btn-serang");
-
-masukanBerkas.addEventListener("change", () => {
-  berkasAsli = masukanBerkas.files[0] || null;
-  const aktif = !!berkasAsli;
-  tombolSemua.disabled = !aktif;
-  tombolSerang.forEach(t => t.disabled = !aktif);
-  wadahHasil.innerHTML = "";
-  if (aktif) {
-    pratinjauAsli.src = URL.createObjectURL(berkasAsli);
-    pratinjauAsli.classList.remove("hidden");
-    statusEl.textContent = "Siap: " + berkasAsli.name;
-  } else {
-    pratinjauAsli.classList.add("hidden");
-    statusEl.textContent = "Belum ada citra.";
-  }
-});
-
-function kartuHasil(nama, psnr, base64) {
-  const teksPsnr = (psnr === "inf") ? "inf (identik)" : Number(psnr).toFixed(2) + " dB";
-  const div = document.createElement("div");
-  div.className = "border rounded p-2 bg-slate-50";
-  div.innerHTML =
-    '<p class="text-sm font-semibold">' + nama + '</p>' +
-    '<p class="text-sm text-emerald-700 font-mono">PSNR: ' + teksPsnr + '</p>' +
-    '<img class="mt-1 max-h-48 rounded border" src="data:image/png;base64,' + base64 + '" alt="' + nama + '">';
-  return div;
+// Tab switcher (tidak mereset state masing-masing mode).
+const tab1 = document.getElementById("tab-mode1");
+const tab2 = document.getElementById("tab-mode2");
+const panel1 = document.getElementById("panel-mode1");
+const panel2 = document.getElementById("panel-mode2");
+function pilihTab(keMode1) {
+  panel1.classList.toggle("hidden", !keMode1);
+  panel2.classList.toggle("hidden", keMode1);
+  tab1.className = "px-4 py-1 rounded font-semibold " + (keMode1 ? "bg-emerald-600" : "bg-slate-700");
+  tab2.className = "px-4 py-1 rounded font-semibold " + (keMode1 ? "bg-slate-700" : "bg-emerald-600");
 }
+tab1.addEventListener("click", () => pilihTab(true));
+tab2.addEventListener("click", () => pilihTab(false));
 
+// Pembantu umum.
 async function kirim(url, formData) {
   let respon;
   try {
     respon = await fetch(url, { method: "POST", body: formData });
   } catch (e) {
-    throw new Error("Tidak bisa menghubungi backend di " + location.origin +
-      " — pastikan 'venv\\Scripts\\python main.py' jalan lalu buka http://127.0.0.1:8000. (" + e.message + ")");
+    throw new Error("Tidak bisa menghubungi backend — pastikan 'venv\\Scripts\\python main.py' jalan lalu buka http://127.0.0.1:8000. (" + e.message + ")");
   }
   let data = {};
-  try { data = await respon.json(); } catch (e) { /* abaikan, ditangani di bawah */ }
+  try { data = await respon.json(); } catch (e) { /* ditangani di bawah */ }
   if (!respon.ok) {
     if (respon.status === 405) {
-      throw new Error("HTTP 405 — halaman ini dibuka lewat Live Server :5500/file, bukan backend. Tutup Live Server, jalankan 'venv\\Scripts\\python main.py', lalu buka http://127.0.0.1:8000.");
+      throw new Error("HTTP 405 — halaman dibuka lewat Live Server :5500/file, bukan backend. Buka http://127.0.0.1:8000.");
     }
     throw new Error(data.galat || ("HTTP " + respon.status));
   }
   return data;
 }
+function base64KeBlob(b64, tipe) {
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new Blob([buf], { type: tipe || "image/png" });
+}
+function fmtPsnr(psnr) {
+  if (psnr === "inf") return "inf (identik)";
+  if (psnr === null || psnr === undefined) return "n/a (ukuran berubah)";
+  return Number(psnr).toFixed(2) + " dB";
+}
 
-function butuhBerkas() {
-  if (!berkasAsli) { statusEl.textContent = "Unggah citra dulu."; return null; }
+// ---------- MODE 1 ----------
+const S1 = { cover: null, stego: null, nbit: 0, wmMode: "teks", teks: "", logo: null,
+             logoW: 0, logoH: 0, key: "", alpha: 15, stegoW: 0, stegoH: 0, psnrEmbed: null };
+const m1Cover = document.getElementById("m1-cover");
+const m1Key = document.getElementById("m1-key");
+const m1Teks = document.getElementById("m1-teks");
+const m1Logo = document.getElementById("m1-logo");
+const m1Alpha = document.getElementById("m1-alpha");
+const m1Sisip = document.getElementById("m1-sisip");
+const m1Status = document.getElementById("m1-status");
+const m1Hasil = document.getElementById("m1-hasil");
+const m1Semua = document.getElementById("m1-semua");
+const btnSerang = document.querySelectorAll(".btn-serang");
+
+// Kunci tombol Mode 1 selama request berjalan agar klik beruntun tidak
+// menumpuk komputasi DCT di server (berujung ERR_CONNECTION_RESET/REFUSED).
+function setSibukM1(sibuk) {
+  m1Sisip.disabled = sibuk || !S1.cover;
+  m1Semua.disabled = sibuk || !S1.stego;
+  btnSerang.forEach(t => t.disabled = sibuk || !S1.stego);
+}
+
+document.querySelectorAll('input[name="m1-wmmode"]').forEach(r => r.addEventListener("change", () => {
+  const modeLogo = document.querySelector('input[name="m1-wmmode"]:checked').value === "logo";
+  m1Teks.classList.toggle("hidden", modeLogo);
+  m1Logo.classList.toggle("hidden", !modeLogo);
+}));
+document.getElementById("m1-acapkunci").addEventListener("click", () => {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  m1Key.value = Array.from(b).map(x => x.toString(16).padStart(2, "0")).join("");
+});
+m1Cover.addEventListener("change", () => {
+  S1.cover = m1Cover.files[0] || null;
+  const img = document.getElementById("m1-pratinjau-cover");
+  m1Sisip.disabled = !S1.cover;
+  if (S1.cover) {
+    img.src = URL.createObjectURL(S1.cover);
+    img.classList.remove("hidden");
+    m1Status.textContent = "Siap disisip: " + S1.cover.name;
+  } else {
+    img.classList.add("hidden");
+    m1Status.textContent = "Unggah citra cover dulu.";
+  }
+});
+
+m1Sisip.addEventListener("click", async () => {
+  if (!S1.cover) return;
+  S1.wmMode = document.querySelector('input[name="m1-wmmode"]:checked').value;
+  S1.key = m1Key.value.trim();
+  S1.alpha = parseFloat(m1Alpha.value) || 15;
+  S1.teks = m1Teks.value.trim();
+  S1.logo = m1Logo.files[0] || null;
+  if (!S1.key) { m1Status.textContent = "Isi kunci dulu."; return; }
+  if (S1.wmMode === "teks" && !S1.teks) { m1Status.textContent = "Isi teks watermark dulu."; return; }
+  if (S1.wmMode === "logo" && !S1.logo) { m1Status.textContent = "Pilih file logo dulu."; return; }
   const fd = new FormData();
-  fd.append("berkas", berkasAsli);
+  fd.append("berkas", S1.cover);
+  fd.append("key", S1.key);
+  fd.append("alpha", S1.alpha);
+  if (S1.wmMode === "teks") fd.append("teks", S1.teks);
+  else fd.append("logo", S1.logo);
+  m1Status.textContent = "Menyisipkan … (DCT murni, mohon tunggu)";
+  setSibukM1(true);
+  try {
+    const d = await kirim("/api/watermark/embed", fd);
+    S1.stego = base64KeBlob(d.stego_base64);
+    S1.nbit = d.jumlah_bit;
+    S1.logoW = d.lebar_logo; S1.logoH = d.tinggi_logo;
+    S1.stegoW = d.lebar; S1.stegoH = d.tinggi;
+    S1.psnrEmbed = d.psnr;
+    const img = document.getElementById("m1-pratinjau-stego");
+    img.src = URL.createObjectURL(S1.stego);
+    img.classList.remove("hidden");
+    document.getElementById("m1-psnr").textContent = "PSNR: " + fmtPsnr(d.psnr);
+    document.getElementById("m1-dash-psnr").textContent = fmtPsnr(d.psnr);
+    m1Hasil.innerHTML = "";
+    btnSerang.forEach(t => t.disabled = false);
+    m1Semua.disabled = false;
+    m1Status.textContent = "Tersisip: " + d.jumlah_bit + " bit (" + d.mode + "). Silakan serang.";
+  } catch (e) {
+    m1Status.textContent = "Gagal: " + e.message;
+  } finally {
+    setSibukM1(false);
+  }
+});
+
+function fdEkstrak(blobSerang) {
+  const fd = new FormData();
+  fd.append("citra_asli", S1.cover);
+  fd.append("citra_input", blobSerang, "serangan.png");
+  fd.append("key", S1.key);
+  fd.append("alpha", S1.alpha);
+  fd.append("jumlah_bit", S1.nbit);
+  if (S1.wmMode === "teks") fd.append("teks_asli", S1.teks);
+  else {
+    fd.append("logo_asli", S1.logo);
+    fd.append("lebar_logo", S1.logoW);
+    fd.append("tinggi_logo", S1.logoH);
+  }
   return fd;
 }
 
-tombolSerang.forEach(tombol => {
+function kartuHasil(nama, psnr, b64, ekstraksi) {
+  const div = document.createElement("div");
+  div.className = "border rounded p-2 bg-slate-50";
+  let metrik = '<p class="text-sm text-emerald-700 font-mono">PSNR: ' + fmtPsnr(psnr) + "</p>";
+  if (ekstraksi && ekstraksi.nc !== undefined) {
+    metrik += '<p class="text-sm font-mono">NC: ' + Number(ekstraksi.nc).toFixed(4) +
+      " | BER: " + (Number(ekstraksi.ber) * 100).toFixed(2) + "%</p>" +
+      '<p class="text-xs font-semibold">' + ekstraksi.status_kepemilikan + "</p>";
+    if (ekstraksi.teks_hasil !== undefined) {
+      metrik += "<p class='text-xs'>WM: <code class='font-mono'>" + ekstraksi.teks_hasil + "</code></p>";
+    }
+    if (ekstraksi.watermark_base64) {
+      metrik += '<img class="mt-1 max-h-20 rounded border" src="data:image/png;base64,' +
+        ekstraksi.watermark_base64 + '" alt="watermark terekstrak">';
+    }
+  } else if (ekstraksi && ekstraksi.galat) {
+    metrik += '<p class="text-xs text-red-600">Ekstraksi gagal: ' + ekstraksi.galat + "</p>";
+  }
+  div.innerHTML =
+    '<p class="text-sm font-semibold">' + nama + "</p>" + metrik +
+    '<img class="mt-1 max-h-48 rounded border" src="data:image/png;base64,' + b64 + '" alt="' + nama + '">';
+  return div;
+}
+
+async function serangDanEkstrak(jenis) {
+  const fd = new FormData();
+  fd.append("berkas", S1.stego, "stego.png");
+  let data;
+  if (jenis.startsWith("jpeg-")) {
+    fd.append("kualitas", jenis.split("-")[1]);
+    data = await kirim("/api/attack/jpeg", fd);
+  } else {
+    fd.append("jenis", jenis);
+    data = await kirim("/api/attack/manipulation", fd);
+  }
+  let ekstraksi = null;
+  try {
+    ekstraksi = await kirim("/api/watermark/extract", fdEkstrak(base64KeBlob(data.citra_base64)));
+    if (ekstraksi.nc === undefined) {
+      ekstraksi = { galat: "Backend tidak mengembalikan NC." };
+    } else {
+      document.getElementById("m1-dash-nc").textContent = Number(ekstraksi.nc).toFixed(4);
+      document.getElementById("m1-dash-ber").textContent = (Number(ekstraksi.ber) * 100).toFixed(2) + "%";
+      document.getElementById("m1-dash-status").textContent = ekstraksi.status_kepemilikan;
+    }
+  } catch (e) {
+    ekstraksi = { galat: e.message };
+  }
+  return { data, ekstraksi };
+}
+
+btnSerang.forEach(tombol => {
   tombol.addEventListener("click", async () => {
-    const fd = butuhBerkas();
-    if (!fd) return;
+    if (!S1.stego) { m1Status.textContent = "Sisipkan watermark dulu."; return; }
     const jenis = tombol.dataset.serang;
-    statusEl.textContent = "Menyerang: " + jenis + " …";
+    m1Status.textContent = "Menyerang: " + jenis + " … (lalu ekstrak otomatis)";
+    setSibukM1(true);
     try {
-      let data;
-      if (jenis.startsWith("jpeg-")) {
-        fd.append("kualitas", jenis.split("-")[1]);
-        data = await kirim("/api/attack/jpeg", fd);
-      } else {
-        fd.append("jenis", jenis);
-        data = await kirim("/api/attack/manipulation", fd);
-      }
-      wadahHasil.prepend(kartuHasil(data.nama, data.psnr, data.citra_base64));
-      statusEl.textContent = "Selesai: " + data.nama;
+      const { data, ekstraksi } = await serangDanEkstrak(jenis);
+      m1Hasil.prepend(kartuHasil(data.nama, data.psnr, data.citra_base64, ekstraksi));
+      m1Status.textContent = "Selesai: " + data.nama;
     } catch (e) {
-      statusEl.textContent = "Gagal: " + e.message;
+      m1Status.textContent = "Gagal: " + e.message;
+    } finally {
+      setSibukM1(false);
     }
   });
 });
 
-tombolSemua.addEventListener("click", async () => {
-  const fd = butuhBerkas();
-  if (!fd) return;
-  statusEl.textContent = "Menjalankan semua serangan …";
-  wadahHasil.innerHTML = "";
+m1Semua.addEventListener("click", async () => {
+  if (!S1.stego) return;
+  m1Status.textContent = "Menjalankan semua serangan … (antre satu per satu di server)";
+  m1Hasil.innerHTML = "";
+  setSibukM1(true);
   try {
-    const data = await kirim("/api/attack/semua", fd);
-    data.hasil.forEach(h => wadahHasil.appendChild(kartuHasil(h.nama, h.psnr, h.citra_base64)));
-    statusEl.textContent = "Selesai: " + data.hasil.length + " serangan.";
+    const fd = new FormData();
+    fd.append("berkas", S1.stego, "stego.png");
+    const paket = await kirim("/api/attack/semua", fd);
+    for (const h of paket.hasil) {
+      let ekstraksi = null;
+      try {
+        ekstraksi = await kirim("/api/watermark/extract", fdEkstrak(base64KeBlob(h.citra_base64)));
+        if (ekstraksi.nc === undefined) ekstraksi = { galat: "Backend tidak mengembalikan NC." };
+      } catch (e) {
+        ekstraksi = { galat: e.message };
+      }
+      m1Hasil.appendChild(kartuHasil(h.nama, h.psnr, h.citra_base64, ekstraksi));
+    }
+    m1Status.textContent = "Selesai: " + paket.hasil.length + " serangan.";
   } catch (e) {
-    statusEl.textContent = "Gagal: " + e.message;
+    m1Status.textContent = "Gagal: " + e.message;
+  } finally {
+    setSibukM1(false);
+  }
+});
+
+// ---------- MODE 2 ----------
+document.querySelectorAll('input[name="m2-wmmode"]').forEach(r => r.addEventListener("change", () => {
+  const modeLogo = document.querySelector('input[name="m2-wmmode"]:checked').value === "logo";
+  document.getElementById("m2-teks").classList.toggle("hidden", modeLogo);
+  document.getElementById("m2-logorow").classList.toggle("hidden", !modeLogo);
+  document.getElementById("m2-logorow").classList.toggle("flex", modeLogo);
+}));
+
+document.getElementById("m2-verifikasi").addEventListener("click", async () => {
+  const asli = document.getElementById("m2-asli").files[0];
+  const tersangka = document.getElementById("m2-tersangka").files[0];
+  const key = document.getElementById("m2-key").value.trim();
+  const nbit = parseInt(document.getElementById("m2-nbit").value, 10);
+  const alpha = parseFloat(document.getElementById("m2-alpha").value) || 15;
+  const modeLogo = document.querySelector('input[name="m2-wmmode"]:checked').value === "logo";
+  const status = document.getElementById("m2-status");
+  const hasil = document.getElementById("m2-hasil");
+  if (!asli || !tersangka) { status.textContent = "Unggah kedua citra dulu."; return; }
+  if (!key) { status.textContent = "Isi kunci dulu."; return; }
+  if (!nbit || nbit < 1) { status.textContent = "Isi jumlah bit dulu."; return; }
+  const fd = new FormData();
+  fd.append("citra_asli", asli);
+  fd.append("citra_input", tersangka);
+  fd.append("key", key);
+  fd.append("alpha", alpha);
+  fd.append("jumlah_bit", nbit);
+  if (modeLogo) {
+    const logo = document.getElementById("m2-logo").files[0];
+    if (!logo) { status.textContent = "Pilih logo pembanding dulu."; return; }
+    fd.append("logo_asli", logo);
+    fd.append("lebar_logo", document.getElementById("m2-logow").value || 32);
+    fd.append("tinggi_logo", document.getElementById("m2-logoh").value || 32);
+  } else {
+    const t = document.getElementById("m2-teks").value;
+    if (!t) { status.textContent = "Isi teks pembanding dulu."; return; }
+    fd.append("teks_asli", t);
+  }
+  status.textContent = "Memverifikasi … (DCT murni, mohon tunggu)";
+  hasil.innerHTML = "";
+  const btnVer = document.getElementById("m2-verifikasi");
+  btnVer.disabled = true;
+  try {
+    const d = await kirim("/api/watermark/extract", fd);
+    let html = "";
+    if (d.watermark_base64) {
+      html += '<p class="font-medium mb-1">Watermark hasil ekstraksi:</p>' +
+        '<img class="max-h-40 rounded border" src="data:image/png;base64,' + d.watermark_base64 + '" alt="hasil">';
+    }
+    if (d.teks_hasil !== undefined) html += "<p>Teks hasil: <code class='font-mono'>" + d.teks_hasil + "</code></p>";
+    html += "<p>NC: <b class='font-mono'>" + Number(d.nc).toFixed(4) + "</b> | BER: <b class='font-mono'>" +
+      (Number(d.ber) * 100).toFixed(2) + "%</b></p>" +
+      "<p class='text-base font-bold'>" + d.status_kepemilikan + "</p>";
+    hasil.innerHTML = html;
+    status.textContent = "Selesai.";
+  } catch (e) {
+    status.textContent = "Gagal: " + e.message;
+  } finally {
+    btnVer.disabled = false;
   }
 });
 </script>

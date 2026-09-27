@@ -1,180 +1,144 @@
-"""security.py — Pembangkit deret pseudo-noise (PN) biner yang aman untuk watermarking.
+"""
+security.py
+============
+Modul keamanan kunci & pembangkit deret pseudo-noise (PN) untuk menentukan
+posisi/pola penyisipan watermark pada koefisien DCT frekuensi menengah.
 
-Aturan ketat proyek (lihat AI.md):
-- Kunci / kata sandi / seed DILARANG di-hardcode di kode sumber.
-  Seed selalu diterima sebagai parameter dari input pengguna (antarmuka),
-  atau dibangkitkan acak saat runtime memakai modul `secrets` (CSPRNG).
-- Modul ini memakai `secrets` untuk keacakan aman dan `hashlib.sha256`
-  sebagai penurun deterministik (hash-DRBG sederhana) agar deret yang
-  dibangkitkan dari seed yang sama selalu identik — syarat agar ekstraksi
-  watermark menghasilkan deret yang sama dengan saat penyisipan.
+Prinsip yang dipegang (sesuai AI.md & BACKEND.md):
 
-Semua komentar dan pesan error memakai Bahasa Indonesia.
+1. Kunci rahasia TIDAK PERNAH di-hardcode di kode sumber. Kunci baru
+   dibangkitkan saat runtime memakai `secrets` (CSPRNG bawaan Python),
+   atau ditangkap langsung dari input pengguna di antarmuka.
+2. Deret pseudo-noise (posisi blok, polaritas spread-spectrum) harus
+   REPRODUCIBLE dari kunci yang sama, supaya proses ekstraksi nanti
+   menghasilkan posisi yang identik dengan proses penyisipan. Karena itu,
+   kunci apa pun (hasil generate ataupun ketikan manual pengguna)
+   diturunkan dulu menjadi seed numerik lewat SHA-256 (`hashlib`,
+   pustaka standar Python — bukan bagian dari larangan pustaka DCT),
+   baru dipakai menyalakan generator NumPy `default_rng`. NumPy di sini
+   murni sebagai struktur array & generator berurutan, bukan fungsi
+   transformasi DCT — tidak melanggar batasan proyek.
+3. `secrets` dipakai untuk MEMBANGKITKAN kunci baru (entropi tidak bisa
+   ditebak). Setelah kunci itu ada, ekspansi jadi deret PN memakai PRNG
+   deterministik (bukan CSPRNG lagi) — karena sifatnya justru harus bisa
+   diulang persis dengan kunci yang sama saat ekstraksi berlangsung.
 """
 
 import hashlib
 import secrets
 
-# Panjang seed acak bawaan (dalam byte) bila pengguna tidak mengisi seed.
-PANJANG_SEED_BYTE_BAWAN = 16
+import numpy as np
 
 
-def _validasi_seed(seed: str) -> str:
-    """Validasi seed string dari pengguna, kembalikan seed yang sudah dirapikan."""
-    if not isinstance(seed, str):
-        raise ValueError(
-            f"Seed harus berupa string, ditemukan {type(seed).__name__}."
-        )
-    seed_bersih = seed.strip()
-    if not seed_bersih:
-        raise ValueError("Seed tidak boleh kosong — isi seed dari input pengguna.")
-    return seed_bersih
-
-
-def _validasi_panjang(panjang_n: int) -> int:
-    """Validasi panjang deret N harus bilangan bulat positif."""
-    if isinstance(panjang_n, bool) or not isinstance(panjang_n, int):
-        raise ValueError(
-            f"Panjang deret (N) harus bilangan bulat, ditemukan {type(panjang_n).__name__}."
-        )
-    if panjang_n <= 0:
-        raise ValueError(f"Panjang deret (N) harus > 0, ditemukan {panjang_n}.")
-    return panjang_n
-
-
-def bangkitkan_seed_aman(panjang_byte: int = PANJANG_SEED_BYTE_BAWAN) -> str:
-    """Membangkitkan seed acak yang aman memakai CSPRNG `secrets`.
-
-    Dipakai saat pengguna tidak mengisi seed sendiri — aplikasi memanggil
-    fungsi ini saat runtime (tidak ada kunci yang di-hardcode).
-
-    Args:
-        panjang_byte: jumlah byte acak (minimal 8). Makin besar makin kuat.
-
-    Returns:
-        String heksadesimal sepanjang 2 * panjang_byte karakter.
+def generate_secure_key(n_bytes: int = 32) -> str:
     """
-    if isinstance(panjang_byte, bool) or not isinstance(panjang_byte, int):
-        raise ValueError("Panjang byte seed harus bilangan bulat.")
-    if panjang_byte < 8:
-        raise ValueError(
-            f"Panjang byte seed minimal 8 demi keamanan, ditemukan {panjang_byte}."
-        )
-    # secrets.token_hex memakai os.urandom di balik layar (CSPRNG sistem).
-    return secrets.token_hex(panjang_byte)
-
-
-def bangkitkan_deret_pn(seed: str, panjang_n: int) -> list:
-    """Membangkitkan deret pseudo-random biner (0/1) sepanjang N dari seed string.
-
-    Deterministik: seed yang sama selalu menghasilkan deret yang sama
-    (dibutuhkan agar ekstraksi bisa merekonstruksi posisi watermark).
-    Keacakan: tiap blok 32-byte diambil dari SHA-256(seed:counter) lalu
-    dipecah per bit (MSB ke LSB), sehingga deret lolos uji sebaran bit
-    untuk kebutuhan spread-spectrum.
-
-    Args:
-        seed: string rahasia dari input pengguna (tidak di-hardcode).
-        panjang_n: panjang deret yang diminta (jumlah bit watermark / blok).
-
-    Returns:
-        List berisi 0/1 sepanjang `panjang_n`.
-
-    Contoh:
-        >>> bangkitkan_deret_pn("kunci-rahasia-zine", 16)
-        [..., ..., ...]  # 16 bit, deterministik
+    Membangkitkan kunci rahasia baru secara aman memakai CSPRNG bawaan
+    Python (`secrets.token_hex`), untuk kasus pengguna belum punya kunci
+    sendiri. TIDAK PERNAH dipanggil dengan nilai tertanam — entropi murni
+    dari `secrets` saat runtime, ditampilkan sekali ke pengguna via UI
+    agar mereka simpan sendiri (server tidak menyimpan salinan permanen).
     """
-    seed_bersih = _validasi_seed(seed)
-    _validasi_panjang(panjang_n)
-
-    deret = []
-    pencacah = 0
-    # Satu hash SHA-256 menghasilkan 32 byte = 256 bit; iterasi pencacah
-    # sampai seluruh N bit terpenuhi (konstruksi hash-DRBG mode counter).
-    while len(deret) < panjang_n:
-        bahan = f"{seed_bersih}:{pencacah}".encode("utf-8")
-        cerna = hashlib.sha256(bahan).digest()
-        for byte in cerna:
-            # Urai byte menjadi 8 bit dari MSB ke LSB.
-            for geser in range(7, -1, -1):
-                if len(deret) >= panjang_n:
-                    break
-                deret.append((byte >> geser) & 1)
-            if len(deret) >= panjang_n:
-                break
-        pencacah += 1
-    return deret
+    return secrets.token_hex(n_bytes)
 
 
-def bangkitkan_posisi_watermark(seed: str, jumlah_blok: int, jumlah_bit: int) -> list:
-    """Menentukan posisi blok 8x8 terpilih untuk tiap bit watermark.
-
-    Pengacakan Fisher-Yates deterministik: urutan dikocok memakai angka acak
-    turunan SHA-256(seed:posisi:i) sehingga embed dan extract yang memakai
-    seed sama selalu sepakat pada urutan posisi yang sama, tanpa perlu
-    menyimpan tabel posisi.
-
-    Args:
-        seed: string rahasia dari input pengguna.
-        jumlah_blok: total blok 8x8 yang tersedia pada gambar.
-        jumlah_bit: jumlah bit watermark (= jumlah blok yang dipilih).
-
-    Returns:
-        List indeks blok terpilih sepanjang `jumlah_bit` (unik, 0..jumlah_blok-1).
+def _derive_seed(key: str) -> int:
     """
-    seed_bersih = _validasi_seed(seed)
-    for nama, nilai in (("jumlah_blok", jumlah_blok), ("jumlah_bit", jumlah_bit)):
-        if isinstance(nilai, bool) or not isinstance(nilai, int) or nilai <= 0:
-            raise ValueError(f"{nama} harus bilangan bulat > 0, ditemukan {nilai}.")
-    if jumlah_bit > jumlah_blok:
-        raise ValueError(
-            f"Jumlah bit ({jumlah_bit}) melebihi jumlah blok tersedia ({jumlah_blok})."
-        )
-
-    # Mulai dari urutan identitas, lalu kocok Fisher-Yates mundur.
-    indeks = list(range(jumlah_blok))
-    for i in range(jumlah_blok - 1, 0, -1):
-        bahan = f"{seed_bersih}:posisi:{i}".encode("utf-8")
-        angka_acak = int.from_bytes(hashlib.sha256(bahan).digest(), "big")
-        j = angka_acak % (i + 1)
-        indeks[i], indeks[j] = indeks[j], indeks[i]
-    # Ambil K terdepan dalam urutan terkocok (urutan dipertahankan).
-    return indeks[:jumlah_bit]
-
-
-def deret_ke_bipolar(deret_biner: list) -> list:
-    """Mengubah deret biner 0/1 menjadi deret bipolar -1/+1 untuk spread-spectrum.
-
-    Args:
-        deret_biner: list berisi hanya 0 dan 1.
-
-    Returns:
-        List berisi -1 (untuk 0) dan +1 (untuk 1).
+    Menurunkan kunci (string, boleh dari `generate_secure_key()` ataupun
+    ketikan manual pengguna) menjadi seed numerik lewat SHA-256. Ini
+    BUKAN pembangkit kunci — hanya konversi format supaya bisa dipakai
+    menyalakan PRNG NumPy secara deterministik dan tahan tebak (hash
+    kriptografis, bukan pemetaan linear yang mudah ditiru).
     """
-    if not isinstance(deret_biner, (list, tuple)) or len(deret_biner) == 0:
-        raise ValueError("Deret biner harus list/tuple tak-kosong berisi 0/1.")
-    hasil = []
-    for posisi, bit in enumerate(deret_biner):
-        if bit not in (0, 1):
+    if not key or not isinstance(key, str):
+        raise ValueError("Kunci harus berupa string tidak kosong.")
+    digest = hashlib.sha256(key.encode("utf-8")).digest()
+    return int.from_bytes(digest, byteorder="big")
+
+
+def _get_rng(key: str) -> np.random.Generator:
+    """Generator NumPy yang deterministik terhadap `key` yang sama."""
+    return np.random.default_rng(_derive_seed(key))
+
+
+def generate_binary_sequence(key: str, length: int) -> np.ndarray:
+    """
+    Deret pseudo-random biner (0/1) sepanjang `length`, deterministik
+    terhadap `key`. Dipakai bila bit watermark ditentukan langsung
+    sebagai 0/1 (mis. paritas kuantisasi koefisien).
+    """
+    rng = _get_rng(key)
+    return rng.integers(0, 2, size=length, dtype=np.int8)
+
+
+def generate_bipolar_sequence(key: str, length: int) -> np.ndarray:
+    """
+    Deret pseudo-noise bipolar (-1/+1) sepanjang `length`, deterministik
+    terhadap `key`. Bentuk PN yang lazim untuk penyisipan spread-spectrum:
+
+        F'(u,v) = F(u,v) + alpha * PN(i)
+    """
+    rng = _get_rng(key)
+    return rng.choice(np.array([-1, 1], dtype=np.int8), size=length)
+
+
+def generate_position_permutation(key: str, total_positions: int, n_select: int | None = None) -> np.ndarray:
+    """
+    Permutasi pseudo-random dari indeks 0..total_positions-1, deterministik
+    terhadap `key`. Dipakai untuk mengacak urutan blok 8x8 (atau koefisien
+    frekuensi menengah di dalamnya) yang dipilih sebagai lokasi penyisipan,
+    sehingga posisi watermark tidak bisa ditebak tanpa `key` yang benar.
+
+    Jika `n_select` diberikan, hanya `n_select` posisi pertama dari
+    permutasi yang dikembalikan (mis. sejumlah blok yang benar-benar
+    dibutuhkan untuk menampung panjang watermark).
+    """
+    rng = _get_rng(key)
+    permutasi = rng.permutation(total_positions)
+    if n_select is not None:
+        if n_select > total_positions:
             raise ValueError(
-                f"Deret hanya boleh berisi 0/1, indeks ke-{posisi} bernilai {bit}."
+                "n_select tidak boleh melebihi total_positions (kapasitas citra tidak cukup untuk watermark ini)."
             )
-        hasil.append(1 if bit == 1 else -1)
-    return hasil
+        return permutasi[:n_select]
+    return permutasi
 
 
-# Alias Inggris agar mudah dipakai dari modul lain / pengujian.
-# Nama Indonesia tetap menjadi API utama.
-def generate_pn_sequence(seed: str, panjang_n: int) -> list:
-    """Alias dari bangkitkan_deret_pn (untuk kompatibilitas penamaan Inggris)."""
-    return bangkitkan_deret_pn(seed, panjang_n)
+def keys_produce_different_sequences(key_a: str, key_b: str, length: int = 256) -> bool:
+    """
+    Utilitas verifikasi: True jika dua kunci berbeda menghasilkan deret
+    biner yang jelas berbeda (rasio bit berbeda cukup tinggi). Hanya
+    dipakai untuk self-test, bukan bagian dari alur produksi.
+    """
+    a = generate_binary_sequence(key_a, length)
+    b = generate_binary_sequence(key_b, length)
+    rasio_beda = np.mean(a != b)
+    # Untuk dua kunci independen, rasio bit berbeda idealnya mendekati 0.5
+    return rasio_beda > 0.3
 
 
-def generate_secure_seed(panjang_byte: int = PANJANG_SEED_BYTE_BAWAN) -> str:
-    """Alias dari bangkitkan_seed_aman (untuk kompatibilitas penamaan Inggris)."""
-    return bangkitkan_seed_aman(panjang_byte)
+if __name__ == "__main__":
+    print("[check] Membangkitkan kunci baru via secrets.token_hex() ...")
+    kunci_baru = generate_secure_key()
+    print(f"[check] Panjang kunci: {len(kunci_baru)} karakter hex ({len(kunci_baru) // 2} byte entropi)")
 
+    print("\n[check] Determinisme: kunci sama -> deret sama?")
+    seq1 = generate_binary_sequence(kunci_baru, 32)
+    seq2 = generate_binary_sequence(kunci_baru, 32)
+    sama = bool(np.array_equal(seq1, seq2))
+    print(f"[check] seq1 == seq2 : {sama}")
+    assert sama, "Deret biner tidak konsisten untuk kunci yang sama!"
 
-def generate_watermark_positions(seed: str, jumlah_blok: int, jumlah_bit: int) -> list:
-    """Alias dari bangkitkan_posisi_watermark (untuk kompatibilitas penamaan Inggris)."""
-    return bangkitkan_posisi_watermark(seed, jumlah_blok, jumlah_bit)
+    print("\n[check] Dua kunci berbeda -> deret berbeda signifikan?")
+    kunci_lain = generate_secure_key()
+    beda = keys_produce_different_sequences(kunci_baru, kunci_lain, length=1024)
+    print(f"[check] kunci berbeda menghasilkan deret signifikan berbeda: {beda}")
+    assert beda
+
+    print("\n[check] Permutasi posisi blok valid (tanpa duplikat)?")
+    total_blok = 4096  # misal citra 512x512 -> (512/8)^2 blok
+    posisi = generate_position_permutation(kunci_baru, total_blok, n_select=1024)
+    unik = len(set(posisi.tolist())) == len(posisi)
+    print(f"[check] {len(posisi)} posisi terpilih, semua unik: {unik}")
+    assert unik
+
+    print("\n[check] SEMUA VERIFIKASI LULUS ✔")

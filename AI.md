@@ -55,19 +55,20 @@ pytest tests/                     # (Opsional) Jalankan unit test ekstraksi/metr
 |-------|--------|--------|
 | `main.py` | Routing API FastAPI, integrasi UI | Belum mulai |
 | `dct_core.py` | Algoritma DCT & IDCT matematis (kalkulasi manual) | ✅ Selesai |
-| `watermark_engine.py` | Multiprocessing: pemecahan gambar ke blok 8x8 & spread spectrum | ✅ Selesai |
+| `watermark_engine.py` | Multiprocessing: pemecahan gambar ke blok 8x8 & spread spectrum | Belum mulai |
 | `security.py` | CSPRNG (`secrets`) untuk pseudo-noise sequence | ✅ Selesai |
-| `attacker.py` | Simulasi serangan (Pillow/PIL) | ✅ Selesai |
-| `evaluator.py` | Kalkulasi PSNR, NC, BER | ✅ Selesai |
+| `attacker.py` | Simulasi serangan (Pillow/PIL) | Belum mulai |
+| `evaluator.py` | Kalkulasi PSNR, NC, BER | Belum mulai |
 
 ---
 
 ## Aturan Ketat (WAJIB DIPATUHI AI)
 
 1. **Larangan pustaka untuk logika inti** — Transformasi 2D-DCT/IDCT dan penyisipan frekuensi menengah WAJIB ditulis sendiri secara matematis (sigma/*double-summation* cosinus eksplisit). DILARANG KERAS memakai `cv2.dct()`, `scipy.fftpack.dct()`, `numpy.fft`, atau fungsi bawaan sejenis.
-2. **Manajemen kunci rahasia** — Kunci, kata sandi, dan seed pseudo-noise TIDAK BOLEH di-*hardcode* di kode sumber. Gunakan `secrets` atau `os.urandom` saat runtime, atau tangkap dari input antarmuka.
+2. **Manajemen kunci rahasia** — Kunci, kata sandi, dan seed pseudo-noise TIDAK BOLEH di-*hardcode* di kode sumber **maupun diunggah ke GitHub** (ketentuan tugas melarang keduanya). Gunakan `secrets` atau `os.urandom` saat runtime, atau tangkap dari input antarmuka. Karena arsitektur ini *in-memory only* (lihat `BACKEND.md` §5 — tidak ada database/berkas konfigurasi yang menyimpan kunci), syarat "tidak diunggah ke GitHub" otomatis terpenuhi — tidak ada apa pun yang bisa ter-commit.
 3. **Simulasi serangan wajib** — Kompresi JPEG harus diuji pada tiga level kualitas: **90, 70, dan 50**, ditambah *cropping*, *resize*, Gaussian *noise*, dan perubahan kontras.
 4. **Metrik evaluasi** — PSNR membandingkan citra 2D (asli vs stego); NC dan BER membandingkan deret bit/array 1D (logo asli vs logo hasil ekstraksi).
+5. **Unit test wajib** — Minimal 5 unit test untuk fungsi inti (Ketentuan Teknis Umum Bagian 4), ditaruh di `tests/` dan dijalankan via `pytest tests/`. ⚠️ **Status saat ini:** `dct_core.py` dan `security.py` baru punya self-check informal (blok `__main__`), BELUM dibungkus jadi test resmi di `tests/` — lihat `UJI.md` §4 dan `TODOLIST.md` untuk daftar 5 test yang perlu dipindahkan.
 
 ---
 
@@ -85,10 +86,22 @@ Dataset citra uji coba resolusi tinggi (misal: koleksi foto zine dokumenter pete
 
 ---
 
+## Integritas Akademik & Penggunaan AI (Bagian 10 Ketentuan Tugas)
+
+⚠️ **Belum ada rencana untuk ini sebelum audit ini** — ditambahkan sekarang karena wajib menurut dokumen ketentuan:
+
+- Dokumen ketentuan tugas menyatakan: *"Asisten AI boleh dipakai untuk membantu belajar dan menulis kode. Bagian yang dibantu AI wajib disebutkan pada lampiran laporan."*
+- Karena seluruh proyek ini dikerjakan lewat *vibecoding* bersama AI, laporan **wajib** menyertakan **Lampiran Penggunaan AI** yang merinci modul mana yang dibantu AI dan sejauh mana (mis. "seluruh isi `dct_core.py` dan `security.py` ditulis berdasarkan prompt di AI.md, diverifikasi lewat self-check matematis").
+- Setiap anggota tetap harus bisa menjelaskan kode yang dikumpulkan — ketidakmampuan menjelaskan mengurangi nilai individu, terlepas dari siapa yang menulis kodenya.
+- Ditambahkan sebagai task baru di `TODOLIST.md`.
+
+---
+
 ## Dokumen Terkait
 
 - `BACKEND.md` — Arsitektur API, modul pemrosesan Python, dan formula evaluasi
 - `FRONTEND.md` — Layout UI, manajemen state via Vanilla JS
+- `UJI.md` — Rencana pengujian kuantitatif, unit test wajib, dan kerangka analisis trade-off
 - `TODOLIST.md` — Checklist progres hingga tenggat 30 September 2026
 
 ---

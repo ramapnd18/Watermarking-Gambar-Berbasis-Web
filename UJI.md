@@ -146,7 +146,32 @@ Ditempatkan di `tests/`, dijalankan via `pytest tests/` (lihat `AI.md :: Command
 
 ---
 
-## 6. Luaran Pengujian
+## 6. Kerangka Analisis Trade-off (Imperceptibility vs Robustness)
+
+> Menjawab Rumusan Masalah #4 dan Tujuan #4 BAB I, yang menuntut **analisis** karakteristik metode — bukan sekadar tabel angka mentah dari §3.
+
+Inti trade-off: kekuatan penyisipan (`alpha`, parameter di `watermark_engine.py`) menentukan seberapa besar koefisien DCT diubah. `alpha` besar → watermark lebih tahan serangan (NC/BER pasca-serangan lebih baik) tapi PSNR turun (distorsi lebih terlihat). `alpha` kecil → sebaliknya.
+
+### 6.1 Matriks Uji Tambahan (Kecil & Terarah)
+
+Supaya tidak menggandakan seluruh §3 di tengah jadwal yang padat, uji trade-off cukup pada **1 citra representatif** (usul: `citra_02_area_datar`, kasus visual paling ketat) dengan **3 level `alpha`**:
+
+| Level | Alpha (placeholder, sesuaikan skala implementasi) | PSNR (dB) | NC rata-rata pasca-JPEG 50 |
+|-------|-----------------------------------------------------|-----------|--------------------------------|
+| Lemah | mis. 5 | | |
+| Sedang | mis. 15 | | |
+| Kuat | mis. 30 | | |
+
+### 6.2 Kerangka Pembahasan di Laporan (Bab Pengujian dan Analisis)
+
+1. Tabel/plot PSNR vs `alpha` — tunjukkan penurunan kualitas visual seiring `alpha` naik.
+2. Tabel/plot NC rata-rata (pasca serangan terberat, mis. JPEG 50) vs `alpha` — tunjukkan kenaikan ketahanan seiring `alpha` naik.
+3. Tentukan titik keseimbangan: `alpha` minimum yang NC-nya masih di atas ambang layak (mis. > 0.7) sambil PSNR tetap di atas ambang kualitas visual wajar.
+4. Rekomendasi penggunaan untuk konteks jurnalistik, mis. "gunakan alpha sedang sebagai default karena foto jurnalistik lebih sering ditempuh lewat unggah-kompres-ulang media sosial daripada dicetak resolusi penuh."
+
+---
+
+## 7. Luaran Pengujian
 
 Sesuai Bagian 5 dokumen tugas ("Data pengujian" wajib format XLSX):
 
@@ -155,7 +180,7 @@ Sesuai Bagian 5 dokumen tugas ("Data pengujian" wajib format XLSX):
 
 ---
 
-## 7. Kaitan dengan Skenario Demo UTS
+## 8. Kaitan dengan Skenario Demo UTS
 
 Demo wajib (Bagian 3.C): sisipkan watermark ke satu citra, lakukan **minimal tiga serangan langsung**, tampilkan watermark hasil ekstraksi beserta NC dan BER.
 
@@ -163,11 +188,12 @@ Rekomendasi kombinasi 3 serangan untuk demo langsung (dari tombol Action Bar di 
 
 ---
 
-## 8. Checklist Pengujian
+## 9. Checklist Pengujian
 
 - [ ] §3.1 PSNR selesai untuk 3 citra
 - [ ] §3.2 Serangan JPEG 90/70/50 selesai untuk 3 citra (9 kombinasi)
 - [ ] §3.3 Serangan cropping/resize/noise/kontras selesai untuk 3 citra (12 kombinasi)
 - [ ] 5 unit test wajib lulus (`pytest tests/`)
+- [ ] §6 Matriks trade-off 3 level alpha selesai (menjawab Tujuan #4 BAB I)
 - [ ] Data terkompilasi ke `hasil_pengujian.xlsx`
 - [ ] *(Pengayaan, prioritas rendah)* Uji watermark pada citra AI-generatif

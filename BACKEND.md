@@ -27,10 +27,10 @@ Global prefix: **`/api`**.
 |-------|--------|--------|
 | `main.py` | Controller FastAPI, routing endpoint, integrasi UI | Belum mulai |
 | `dct_core.py` | Rumus matematis 2D-DCT & Inverse DCT (manual tanpa library) | ✅ Selesai |
-| `watermark_engine.py` | Memecah array NumPy menjadi blok 8x8, eksekusi `multiprocessing` | ✅ Selesai |
-| `security.py` | Men-generate *pseudo-noise sequence* dari seed/key | ✅ Selesai |
-| `attacker.py` | Menerapkan simulasi noise, resize, crop, kompresi JPEG | ✅ Selesai |
-| `evaluator.py` | Menghitung persamaan PSNR, NC, dan BER pasca-serangan | ✅ Selesai |
+| `watermark_engine.py` | Memecah array NumPy menjadi blok 8x8, eksekusi `multiprocessing` | Belum mulai |
+| `security.py` | Men-generate *pseudo-noise sequence* dari seed/key | Belum mulai |
+| `attacker.py` | Menerapkan simulasi noise, resize, crop, kompresi JPEG | Belum mulai |
+| `evaluator.py` | Menghitung persamaan PSNR, NC, dan BER pasca-serangan | Belum mulai |
 
 ---
 
@@ -40,13 +40,43 @@ Global prefix: **`/api`**.
 | Verb | Path | Keterangan |
 |------|------|------------|
 | POST | `/api/watermark/embed` | Menerima citra + teks/logo, mengeksekusi DCT paralel, mereturn *stego-image* + nilai awal PSNR |
-| POST | `/api/watermark/extract` | Menerima *stego-image*, mengekstrak teks/logo menggunakan *pseudo-noise key* |
+| POST | `/api/watermark/extract` | Ekstraksi watermark. **Dua mode pemakaian** — lihat §3.1 |
 
 ### Modul Simulasi Serangan (Skenario UTS)
 | Verb | Path | Keterangan |
 |------|------|------------|
 | POST | `/api/attack/jpeg` | Menerima *stego-image*, di-*compress* ke kualitas 90/70/50, lalu dihitung NC & BER-nya |
 | POST | `/api/attack/manipulation` | Simulasi *crop*, *resize*, *gaussian noise*, atau kontras, mereturn citra rusak + skor ekstraksi |
+
+### 3.1 Detail `/api/watermark/extract` — Satu Endpoint, Dua Mode Pemakaian
+
+Ekstraksi pada cakupan fitur wajib bersifat **non-blind** (butuh citra asli sebagai pembanding). Mode *blind* (tanpa citra asli) adalah fitur pengayaan yang belum dikerjakan — prioritas rendah, sesuai kesepakatan sebelumnya untuk fokus ke fitur wajib dulu.
+
+**Request** (`multipart/form-data`):
+
+| Field | Wajib | Keterangan |
+|-------|-------|------------|
+| `citra_asli` | Ya | Citra asli sebelum disisipkan watermark |
+| `citra_input` | Ya | Citra yang mau diekstrak — bisa citra hasil serangan simulasi (mode a) atau citra yang diunggah manual dari luar sistem (mode b) |
+| `key` | Ya | Kunci rahasia yang dipakai saat penyisipan |
+
+**Response** (JSON):
+
+| Field | Keterangan |
+|-------|------------|
+| `watermark_hasil` | Watermark hasil ekstraksi (logo biner, base64) |
+| `nc` | Skor *Normalized Correlation* |
+| `ber` | *Bit Error Rate* (%) |
+| `status_kepemilikan` | Label ramah pengguna berdasarkan ambang NC — mis. "Watermark Terdeteksi Kuat" (NC ≥ 0.75), "Terdeteksi Sebagian" (0.4 ≤ NC < 0.75), "Tidak Terdeteksi" (NC < 0.4). Ambang ini sementara; dikalibrasi ulang setelah data `UJI.md` §3 keluar. |
+
+**Dua mode pemanggilan endpoint yang sama:**
+
+| Mode | Dipicu dari | `citra_asli` | `citra_input` |
+|------|-------------|---------------|-----------------|
+| (a) Uji Serangan (demo UTS) | Tombol Action Bar, otomatis setelah `/api/attack/*` | Citra asli sesi berjalan (di memori) | Citra hasil serangan simulasi |
+| (b) Verifikasi Kepemilikan (mandiri) | Panel "Verifikasi Kepemilikan" di frontend, dipicu manual | Diunggah manual oleh pengguna | Citra "tersangka" — bisa diunduh dari media sosial, tidak berasal dari sesi yang sama |
+
+Mode (b) inilah yang menjawab skenario riil di BAB I: jurnalis menyimpan citra aslinya sendiri, lalu suatu waktu menemukan foto yang diduga miliknya beredar tanpa atribusi — keduanya diunggah untuk dibuktikan.
 
 ---
 

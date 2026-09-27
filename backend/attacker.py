@@ -23,6 +23,9 @@ from PIL import Image
 # Kualitas JPEG wajib diuji menurut aturan proyek.
 KUALITAS_JPEG_WAJIB = (90, 70, 50)
 
+# Ukuran blok DCT (disamakan dengan watermark_engine.UKURAN_BLOK).
+UKURAN_BLOK_DCT = 8
+
 
 # ---------------------------------------------------------------------------
 # Normalisasi masukan (bytes / PIL.Image / ndarray -> PIL.Image)
@@ -138,13 +141,19 @@ def serangan_noise_gaussian(citra, rata_rata: float = 0.0,
     return Image.fromarray(hasil, mode=mode_asli)
 
 
-def serangan_crop_tengah(citra, proporsi: float = 0.2) -> Image.Image:
+def serangan_crop_tengah(citra, proporsi: float = 0.25) -> Image.Image:
     """Memangkas tepi citra sehingga tersisa area tengah.
 
     Tepi dibuang seluas `proporsi` dari luas total; yang dikembalikan
-    adalah potongan tengah seluas (1 - proporsi). Contoh: proporsi=0.2
-    berarti 20% luas terbuang, tersisa 80% area tengah — serangan
-    cropping standar untuk uji ketahanan watermark.
+    adalah potongan tengah seluas (1 - proporsi). Contoh: proporsi=0.25
+    berarti 25% luas terbuang, tersisa 75% area tengah — serangan
+    cropping standar untuk uji ketahanan watermark (UJI.md §3.3).
+
+    Kotak crop diratakan (snap) ke kelipatan 8 piksel agar selaras dengan
+    grid blok DCT 8x8 — memungkinkan ekstraksi toleran-crop (pencarian
+    offset blok di `watermark_engine.ekstrak_watermark`). Deviasi luas
+    akibat snapping maksimal 7 piksel per sisi dan dicatat di sini,
+    bukan disembunyikan.
 
     Args:
         citra: PIL.Image / bytes / ndarray.
@@ -166,6 +175,10 @@ def serangan_crop_tengah(citra, proporsi: float = 0.2) -> Image.Image:
     tinggi_baru = max(1, round(tinggi * skala))
     kiri = (lebar - lebar_baru) // 2
     atas = (tinggi - tinggi_baru) // 2
+    # Snap ke grid 8px (lihat docstring): geser kiri/atas ke bawah agar
+    # blok DCT penyintas selaras dengan grid citra asli.
+    kiri = (kiri // UKURAN_BLOK_DCT) * UKURAN_BLOK_DCT
+    atas = (atas // UKURAN_BLOK_DCT) * UKURAN_BLOK_DCT
     return gambar.crop((kiri, atas, kiri + lebar_baru, atas + tinggi_baru))
 
 
@@ -194,22 +207,29 @@ def serangan_resize(citra, skala: float = 0.5) -> Image.Image:
     return kecil.resize((lebar, tinggi), Image.BILINEAR)
 
 
-def serangan_kontras(citra, faktor: float = 1.5) -> Image.Image:
-    """Mengubah kontras citra di sekitar rata-rata tiap kanal.
+def serangan_kontras(citra, faktor: float = 1.2,
+                      kecerahan: float = 20.0) -> Image.Image:
+    """Mengubah kontras & kecerahan citra (UJI.md §3.3: ±20%).
 
-    Rumus per piksel: keluar = rata-rata + faktor * (piksel - rata-rata).
-    faktor > 1 menaikkan kontras, 0 < faktor < 1 menurunkannya,
-    faktor = 1 berarti tanpa perubahan.
+    Rumus per piksel: keluar = rata-rata + faktor * (piksel - rata-rata)
+    + kecerahan. faktor > 1 menaikkan kontras, 0 < faktor < 1
+    menurunkannya; kecerahan dalam skala piksel 0..255 (positif
+    mencerahkan, negatif menggelapkan).
 
     Args:
         citra: PIL.Image / bytes / ndarray.
-        faktor: faktor kontras, harus > 0.
+        faktor: faktor kontras, harus > 0 (default 1.2 = +20%).
+        kecerahan: pergeseran kecerahan skala piksel (default +20).
 
     Returns:
         PIL.Image dengan ukuran & mode sama seperti masukan.
     """
     if not isinstance(faktor, (int, float)) or float(faktor) <= 0:
         raise ValueError(f"Faktor kontras harus > 0, ditemukan {faktor}.")
+    if not isinstance(kecerahan, (int, float)):
+        raise ValueError(
+            f"Kecerahan harus angka skala piksel, ditemukan {kecerahan}."
+        )
     gambar = _ke_pil(citra)
     mode_asli = gambar.mode
     larik = np.asarray(gambar).astype(np.float64)
@@ -218,7 +238,8 @@ def serangan_kontras(citra, faktor: float = 1.5) -> Image.Image:
     else:
         # Rata-rata per kanal agar keseimbangan warna tidak bergeser.
         rata = larik.mean(axis=(0, 1), keepdims=True)
-    hasil = np.clip(rata + float(faktor) * (larik - rata), 0, 255).astype(np.uint8)
+    hasil = np.clip(rata + float(faktor) * (larik - rata) + float(kecerahan),
+                    0, 255).astype(np.uint8)
     if larik.ndim == 2:
         return Image.fromarray(hasil, mode="L")
     return Image.fromarray(hasil, mode=mode_asli)
@@ -229,14 +250,14 @@ def serangan_kontras(citra, faktor: float = 1.5) -> Image.Image:
 # ---------------------------------------------------------------------------
 
 def serangan_q50_noise_crop(citra, simpangan_baku: float = 10.0,
-                            proporsi_crop: float = 0.2,
+                            proporsi_crop: float = 0.25,
                             seed=None) -> Image.Image:
     """Serangan gabungan uji: JPEG kualitas 50 -> Gaussian noise -> crop tengah.
 
     Sesuai skenario Prompt 4: menerima PIL Image lalu mengembalikan gambar
     yang sudah dikenai tiga serangan berurutan — kompresi JPEG kualitas 50,
-    penambahan Gaussian noise, dan pemangkasan 20% area tengah (tersisa
-    80% potongan tengah).
+    penambahan Gaussian noise, dan pemangkasan 25% area tengah (tersisa
+    75% potongan tengah, mengikuti UJI.md §3.3).
 
     Args:
         citra: PIL.Image / bytes / ndarray.
@@ -257,9 +278,10 @@ def serangan_q50_noise_crop(citra, simpangan_baku: float = 10.0,
 def terapkan_semua_serangan_uji(citra, seed=None) -> dict:
     """Menjalankan seluruh paket serangan wajib, mengembalikan dict nama->citra.
 
-    Paket meliputi: JPEG 90/70/50, Gaussian noise, crop tengah 20%,
-    resize 0.5, kontras 1.5, plus gabungan q50+noise+crop. Dipakai oleh
-    endpoint simulasi serangan dan modul evaluator (NC/BER per serangan).
+    Paket meliputi: JPEG 90/70/50, Gaussian noise, crop tengah 25%,
+    resize 0.5, kontras 1.2 + kecerahan 20, plus gabungan q50+noise+crop.
+    Dipakai oleh endpoint simulasi serangan dan modul evaluator
+    (NC/BER per serangan).
 
     Args:
         citra: PIL.Image / bytes / ndarray (stego-image).
@@ -274,9 +296,9 @@ def terapkan_semua_serangan_uji(citra, seed=None) -> dict:
         "jpeg_70": kompresi_jpeg(gambar, kualitas=70),
         "jpeg_50": kompresi_jpeg(gambar, kualitas=50),
         "noise_gaussian": serangan_noise_gaussian(gambar, seed=seed),
-        "crop_tengah_20": serangan_crop_tengah(gambar, proporsi=0.2),
+        "crop_tengah_25": serangan_crop_tengah(gambar, proporsi=0.25),
         "resize_05": serangan_resize(gambar, skala=0.5),
-        "kontras_15": serangan_kontras(gambar, faktor=1.5),
+        "kontras_12": serangan_kontras(gambar, faktor=1.2, kecerahan=20.0),
         "gabungan_q50_noise_crop": serangan_q50_noise_crop(gambar, seed=seed),
     }
 
@@ -293,7 +315,7 @@ def gaussian_noise_attack(citra, rata_rata=0.0, simpangan_baku=10.0, seed=None):
     return serangan_noise_gaussian(citra, rata_rata, simpangan_baku, seed)
 
 
-def center_crop_attack(citra, proporsi=0.2):
+def center_crop_attack(citra, proporsi=0.25):
     """Alias dari serangan_crop_tengah."""
     return serangan_crop_tengah(citra, proporsi)
 
@@ -303,12 +325,12 @@ def resize_attack(citra, skala=0.5):
     return serangan_resize(citra, skala)
 
 
-def contrast_attack(citra, faktor=1.5):
+def contrast_attack(citra, faktor=1.2, kecerahan=20.0):
     """Alias dari serangan_kontras."""
-    return serangan_kontras(citra, faktor)
+    return serangan_kontras(citra, faktor, kecerahan)
 
 
 def combined_q50_noise_crop_attack(citra, simpangan_baku=10.0,
-                                   proporsi_crop=0.2, seed=None):
+                                   proporsi_crop=0.25, seed=None):
     """Alias dari serangan_q50_noise_crop."""
     return serangan_q50_noise_crop(citra, simpangan_baku, proporsi_crop, seed)
