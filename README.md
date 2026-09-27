@@ -28,7 +28,9 @@ digitalWatermaking/
 │   └── requirements.txt
 ├── frontend/
 │   └── index.html        # UI tunggal (Vanilla JS + Tailwind CDN)
-├── AI.md / BACKEND.md / FRONTEND.md / UJI.md / TODOLIST.md
+├── AI.md / BACKEND.md / FRONTEND.md / UJI.md / TODOLIST.md (rencana & progres)
+├── doc/                    # Dokumentasi ASA: BACKEND, FRONTEND, HASIL_PENGUJIAN
+├── hasil_pengujian.xlsx    # Data matriks (4 sheet + Pengayaan_AI)
 └── README.md
 ```
 
