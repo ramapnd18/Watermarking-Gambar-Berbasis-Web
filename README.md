@@ -111,8 +111,6 @@ Semua endpoint API mengembalikan JSON; citra hasil dikirim sebagai string `citra
 
 | No | Nama | NPM |
 |----|------|-----|
-| 1 | Nama Anggota 1 | NPM Anggota 1 |
-| 2 | Nama Anggota 2 | NPM Anggota 2 |
-| 3 | Nama Anggota 3 | NPM Anggota 3 |
-
-> Ganti tabel di atas dengan nama & NPM sebenarnya sebelum pengumpulan.
+| 1 | Aini Nurfadilah | 247006111021 |
+| 2 | Rina Natalia | 247006111033 |
+| 3 | Rama Tri Ramdhani | 247006111057 |

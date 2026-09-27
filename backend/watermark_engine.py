@@ -518,7 +518,8 @@ def ekstrak_watermark(citra_asli, citra_input, kunci: str,
 
     Toleran-crop: bila citra input LEBIH KECIL di kedua sisi (mis. habis
     di-crop), fungsi mencari offset blok (ox, oy) yang skornya minimal.
-    Skor = rata-rata ||delta|-alpha|: tiap blok yang dievaluasi membawa
+    Skor = median ||delta|-alpha| (median agar tahan outlier noise):
+    tiap blok yang dievaluasi membawa
     tepat 1 bit tersisip dan crop tidak mengubah nilai piksel penyintas,
     sehingga offset benar memberi skor ~0 sementara offset salah memberi
     skor sebesar perbedaan konten. Diterima bila skor < alpha DAN menonjol
@@ -601,10 +602,13 @@ def _ekstrak_toleran_crop(asli, uji, kunci: str, jumlah_bit: int,
 
         Semua blok yang dievaluasi membawa tepat 1 bit tersisip, sehingga
         pada offset yang benar |delta| ~= alpha untuk tiap bit (crop tidak
-        mengubah nilai piksel penyintas). Skor = rata-rata ||delta|-alpha|:
-        ~0 bila selaras, sebesar perbedaan konten bila salah.
+        mengubah nilai piksel penyintas). Skor = MEDIAN ||delta|-alpha|:
+        median (bukan mean) agar tahan outlier — serangan gabungan
+        (JPEG+noise) menyebarkan sebagian delta jauh dari alpha sementara
+        mayoritas tetap di sekitarnya. Offset salah memberi skor sebesar
+        perbedaan konten.
         """
-        total, cacah, delta = 0.0, 0, []
+        simpang, delta = [], []
         for i, (bx, by) in enumerate(pos_asli):
             ix, iy = bx - ox, by - oy
             if 0 <= ix < baris_uji and 0 <= iy < kolom_uji:
@@ -612,12 +616,16 @@ def _ekstrak_toleran_crop(asli, uji, kunci: str, jumlah_bit: int,
                 q = ix * kolom_uji + iy
                 d = (dct_uji[q][BARIS_SISIP][KOLOM_SISIP]
                      - dct_asli[p][BARIS_SISIP][KOLOM_SISIP])
-                total += abs(abs(d) - alpha)
-                cacah += 1
+                simpang.append(abs(abs(d) - alpha))
                 delta.append(d)
             else:
                 delta.append(None)  # blok ikut terpotong
-        return (total / cacah if cacah else float("inf"), delta, cacah)
+        if not simpang:
+            return (float("inf"), delta, 0)
+        simpang.sort()
+        n = len(simpang)
+        tengah = simpang[n // 2] if n % 2 else (simpang[n // 2 - 1] + simpang[n // 2]) / 2
+        return (tengah, delta, n)
 
     ox_maks, oy_maks = baris_asli - baris_uji, kolom_asli - kolom_uji
     terbaik = (float("inf"), None, None, None, 0)

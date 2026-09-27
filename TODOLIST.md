@@ -27,15 +27,15 @@
 - [x] Pembuatan endpoint FastAPI (`/api/watermark/embed` dan `/api/watermark/extract`, termasuk dua mode ekstraksi — lihat `BACKEND.md` §3.1; terverifikasi via HTTP).
 - [x] Pembuatan UI Frontend (HTML + Tailwind): Mode 1 (Sisip & Uji Serangan) dan Mode 2 (Verifikasi Kepemilikan) — lihat `FRONTEND.md` §2.
 - [x] Logika `fetch()` FormData dari UI ke FastAPI, untuk kedua mode (NC/BER otomatis pasca-serangan).
-- [ ] **(Baru)** Membungkus self-check `dct_core.py` dan `security.py` jadi unit test resmi di `tests/` (bagian dari 5 unit test wajib, lihat `UJI.md` §4).
+- [x] **(Baru)** Membungkus self-check `dct_core.py` dan `security.py` jadi unit test resmi di `tests/` (bagian dari 5 unit test wajib, lihat `UJI.md` §4) — 10 test hijau (`pytest tests/`).
 
 ## 29 September — Simulasi Serangan & Evaluasi
 - [x] Pembuatan endpoint serangan manipulasi gambar (Crop 25%, Resize, Noise, Kontras 1.2 + brightness 20 — selaras `UJI.md` §3.3).
 - [x] Pengujian kompresi JPEG dengan parameter kualitas 90, 70, dan 50 (endpoint + paket `semua` hidup).
 - [x] Implementasi algoritma kalkulasi kualitas citra (PSNR; null bila serangan mengubah ukuran).
 - [x] Implementasi algoritma perbandingan bit ekstraksi (NC dan BER).
-- [ ] Jalankan seluruh matriks `UJI.md` §3 (PSNR, JPEG 90/70/50, crop/resize/noise/kontras) untuk 3 citra uji.
-- [ ] Jalankan matriks trade-off `UJI.md` §6 (3 level alpha) — menjawab Tujuan #4 BAB I.
+- [x] Jalankan seluruh matriks `UJI.md` §3 (PSNR, JPEG 90/70/50, crop/resize/noise/kontras) untuk 3 citra uji — via `tools/jalankan_matriks.py` → `hasil_pengujian.xlsx`.
+- [x] Jalankan matriks trade-off `UJI.md` §6 (3 level alpha) — menjawab Tujuan #4 BAB I.
 - [ ] **(Baru)** Draf Bab IV (Implementasi) dan mulai Bab V (Pengujian dan Analisis) laporan begitu data di atas keluar — jangan ditunda ke hari-H.
 
 ## 30 September — Finalisasi & Pelaporan (DEADLINE)
@@ -45,6 +45,6 @@
 - [ ] Perekaman video demonstrasi skenario UTS (3–5 menit): minimal 3 serangan langsung + tampilkan NC/BER (lihat `UJI.md` §8).
 - [ ] Kompilasi data hasil *testing* simulasi ke dalam file XLSX (`hasil_pengujian.xlsx`, lihat `UJI.md` §7).
 - [ ] Penyempurnaan `README.md`: deskripsi, cara instalasi, cara menjalankan, contoh penggunaan, **nama anggota + NPM**.
-- [ ] Pastikan `pytest tests/` (5 unit test wajib) hijau semua sebelum submit.
+- [x] Pastikan `pytest tests/` (5 unit test wajib) hijau semua sebelum submit — 10/10 lolos.
 - [ ] **(Baru)** Nama berkas laporan sesuai format wajib: `TugasKripto_C_NPM-Ketua.pdf`.
 - [ ] **(Baru)** Cek ulang Daftar Periksa resmi di dokumen ketentuan (fitur wajib jalan, pengujian lengkap, README lengkap, tidak ada kunci di repo, ≥1 rujukan dosen, demo sudah dicoba minimal sekali).

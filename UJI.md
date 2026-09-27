@@ -196,4 +196,4 @@ Rekomendasi kombinasi 3 serangan untuk demo langsung (dari tombol Action Bar di 
 - [ ] 5 unit test wajib lulus (`pytest tests/`)
 - [ ] §6 Matriks trade-off 3 level alpha selesai (menjawab Tujuan #4 BAB I)
 - [ ] Data terkompilasi ke `hasil_pengujian.xlsx`
-- [ ] *(Pengayaan, prioritas rendah)* Uji watermark pada citra AI-generatif
+- [x] *(Pengayaan, prioritas rendah)* Uji watermark pada citra AI-generatif — sheet `Pengayaan_AI` terisi (NC AI vs rata-rata utama).
