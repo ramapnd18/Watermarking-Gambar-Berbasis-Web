@@ -45,6 +45,71 @@
   .radio-row{ display:flex; align-items:center; gap:.4rem; font-size:.85rem; color:#33403a; }
   .stat-delta{ font-size:.72rem; color:#9aa89f; }
   .wave-decor{ position:absolute; left:0; right:0; bottom:0; height:150px; overflow:hidden; pointer-events:none; }
+
+    /* ================= MODE GELAP ================= */
+  html.dark{
+    color-scheme:dark;
+    --sidebar:#0e2123;
+    --sidebar-soft:#17393b;
+    --mint:#24493f;
+    --mint-2:#2a5548;
+    --brand-dark:#7fdcae;
+  }
+  html.dark body{ background:#0d1715 !important; color:#dbe7e1 !important; }
+  html.dark header{ background:#111e1b !important; border-color:#22332e !important; }
+  html.dark .card{ background:#15231f; border-color:#22332e; box-shadow:none; }
+  html.dark .bg-white{ background:#15231f !important; }
+  html.dark [class*="bg-white/70"]{ background:rgba(21,35,31,.7) !important; }
+
+  /* teks */
+  html.dark [class*="text-[#16241c]"],
+  html.dark [class*="text-[#152720]"]{ color:#eaf4ef !important; }
+  html.dark [class*="text-[#33403a]"],
+  html.dark .field-label,
+  html.dark .radio-row{ color:#c9d8d1 !important; }
+  html.dark [class*="text-[#5b6b62]"],
+  html.dark [class*="text-[#6b786f]"],
+  html.dark .text-slate-500{ color:#9db3aa !important; }
+  html.dark [class*="text-[#8b978f]"],
+  html.dark [class*="text-[#9aa89f]"],
+  html.dark .field-hint,
+  html.dark .stat-delta{ color:#7f9990 !important; }
+  html.dark .font-script{ color:#a9cdbd !important; }
+
+  /* garis, kotak placeholder, pembatas */
+  html.dark [class*="border-[#eef1ee]"],
+  html.dark [class*="border-[#dde5e0]"],
+  html.dark [class*="border-[#e5e9e6]"],
+  html.dark [class*="border-[#c7dccf]"],
+  html.dark .border{ border-color:#2a3d37 !important; }
+  html.dark [class*="divide-[#eef1ee]"] > :not([hidden]) ~ :not([hidden]){ border-color:#22332e !important; }
+  html.dark [class*="bg-[#fafbfa]"]{ background:#111e1b !important; }
+  html.dark .bg-slate-100{ background:#1c2e29 !important; }
+
+  /* hero (gradient inline) & tombol bulat kecil */
+  html.dark [style*="linear-gradient(120deg"]{ background:linear-gradient(120deg,#132a24,#183229) !important; }
+  html.dark [style*="background:#eef2f0"]{ background:#22332e !important; }
+  html.dark #tema-toggle:hover{ background:#22332e; }
+
+  /* input & tombol */
+  html.dark .input-field,
+  html.dark input:not([type=radio]):not([type=file]){ background:#0f1c19; border-color:#2a3d37; color:#eaf4ef; }
+  html.dark .input-field::placeholder,
+  html.dark input::placeholder{ color:#6f877e; }
+  html.dark .file-btn{ background:#2f6b57; }
+  html.dark .btn-primary:hover{ background:#3a9a70; }
+  html.dark .pill-attack{ background:#1c2e29; color:#cfe0d8; border-color:#2a3d37; }
+  html.dark .pill-attack:hover:not(:disabled){ background:#25392f; }
+  html.dark .pill-attack-danger{ background:#3a1f1d; color:#f0a9a1; border-color:#5a2c28; }
+  html.dark .pill-attack-danger:hover:not(:disabled){ background:#472624; }
+
+  /* menu sidebar aktif */
+  html.dark .nav-item.active{ background:var(--mint); color:#eafff2; }
+  html.dark .nav-item.active svg{ color:#8fe8bd; }
+
+  /* peringatan server & scrollbar */
+  html.dark #peringatan-server{ background:#3a1f1d; border-color:#7a2f2a; color:#f3b7b0; }
+  html.dark ::-webkit-scrollbar-thumb{ background:#2f4740; }
 </style>
 </head>
 <body class="bg-[#f4f6f4] text-slate-800 min-h-screen">
@@ -105,9 +170,12 @@
 
     <header class="h-[73px] shrink-0 flex items-center justify-between px-8 bg-[#f8faf9] border-b border-[#eef1ee]">
       <h1 id="page-title" class="text-[19px] font-bold text-[#16241c]">Beranda</h1>
-      <button class="w-9 h-9 rounded-full border border-[#e5e9e6] flex items-center justify-center text-slate-500 hover:bg-[#eef2f0]">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
-      </button>
+        <button id="tema-toggle" type="button" title="Ganti tema" class="w-9 h-9 rounded-full border border-[#e5e9e6] flex items-center justify-center text-slate-500 hover:bg-[#eef2f0]">
+          <!-- ikon matahari (tampil di mode terang) -->
+          <svg id="ikon-matahari" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+          <!-- ikon bulan (tampil di mode gelap) -->
+          <svg id="ikon-bulan" class="hidden" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>
+        </button>
     </header>
 
     <main class="flex-1 max-w-[1280px] w-full mx-auto p-6 md:p-8 space-y-6">
@@ -1031,6 +1099,29 @@ m3Jalan.addEventListener("click", async () => {
     m3Jalan.disabled = !S3.cover;
   }
 });
+
+// ---------- Mode gelap / terang ----------
+const TEMA_KEY = "visualguard_tema";
+const temaBtn = document.getElementById("tema-toggle");
+const ikonMatahari = document.getElementById("ikon-matahari");
+const ikonBulan = document.getElementById("ikon-bulan");
+
+function terapkanTema(gelap) {
+  document.documentElement.classList.toggle("dark", gelap);
+  // gelap -> tampil bulan, terang -> tampil matahari
+  ikonMatahari.classList.toggle("hidden", gelap);
+  ikonBulan.classList.toggle("hidden", !gelap);
+  temaBtn.title = gelap ? "Beralih ke mode terang" : "Beralih ke mode gelap";
+}
+function bacaTema() {
+  try { return localStorage.getItem(TEMA_KEY) === "gelap"; } catch (e) { return false; }
+}
+temaBtn.addEventListener("click", () => {
+  const gelapBaru = !document.documentElement.classList.contains("dark");
+  terapkanTema(gelapBaru);
+  try { localStorage.setItem(TEMA_KEY, gelapBaru ? "gelap" : "terang"); } catch (e) { /* abaikan */ }
+});
+terapkanTema(bacaTema());
 </script>
 </body>
 </html>
