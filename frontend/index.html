@@ -46,6 +46,35 @@
   .stat-delta{ font-size:.72rem; color:#9aa89f; }
   .wave-decor{ position:absolute; left:0; right:0; bottom:0; height:150px; overflow:hidden; pointer-events:none; }
 
+  /* komponen upload & hasil agar Mode 2/3 seragam dengan Mode 1 */
+  .preview-box{
+    height:190px;
+    border:1px dashed #dde5e0;
+    background:#fafbfa;
+    border-radius:.75rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  .preview-box img{ max-height:100%; max-width:100%; object-fit:contain; }
+  .result-box{
+    border:1px solid #eef1ee;
+    background:#fafbfa;
+    border-radius:.75rem;
+  }
+  .table-soft{ width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid #eef1ee; border-radius:.75rem; }
+  .table-soft th,.table-soft td{ padding:.65rem .75rem; text-align:left; border-bottom:1px solid #eef1ee; }
+  .table-soft th{ background:#f4f7f5; color:#33403a; font-size:.78rem; font-weight:700; }
+  .table-soft td{ color:#5b6b62; font-size:.8rem; }
+  .table-soft tr:last-child td{ border-bottom:0; }
+  html.dark .preview-box{ background:#111e1b; border-color:#2a3d37; }
+  html.dark .result-box{ background:#111e1b; border-color:#2a3d37; }
+  html.dark .table-soft{ border-color:#2a3d37; }
+  html.dark .table-soft th{ background:#1c2e29; color:#c9d8d1; }
+  html.dark .table-soft td{ color:#9db3aa; border-color:#22332e; }
+
     /* ================= MODE GELAP ================= */
   html.dark{
     color-scheme:dark;
@@ -450,98 +479,267 @@
         </footer>
       </div>
 
-      <!-- ================= PAGE: VERIFIKASI KEPEMILIKAN (MODE 2) — belum diubah ================= -->
+      <!-- ================= PAGE: VERIFIKASI KEPEMILIKAN (MODE 2) ================= -->
       <div id="panel-mode2" class="hidden space-y-6">
-        <section class="bg-white rounded shadow p-4">
-          <h2 class="font-semibold mb-2">Verifikasi Kepemilikan (mandiri)</h2>
-          <p class="text-sm text-slate-500 mb-3">Unggah citra asli milik Anda + citra tersangka dari luar sistem, lalu verifikasi dengan kunci yang sama.</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <label class="block">Citra asli (milik Anda)
-              <input id="m2-asli" type="file" accept="image/*"
-                     class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
-            </label>
-            <label class="block">Citra tersangka (temuan beredar)
-              <input id="m2-tersangka" type="file" accept="image/*"
-                     class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
-            </label>
-            <label class="block">Kunci saat penyisipan
-              <input id="m2-key" type="text" class="mt-1 block w-full border rounded px-2 py-1">
-            </label>
-            <label class="block">Jumlah bit watermark
-              <input id="m2-nbit" type="number" min="1" placeholder="lihat dari hasil Sisipkan"
-                     class="mt-1 block w-full border rounded px-2 py-1">
-            </label>
-            <div class="block">Skema<br>
-              <label class="mr-3"><input type="radio" name="m2-skema" value="nonblind" checked> Non-blind (butuh citra asli)</label>
-              <label><input type="radio" name="m2-skema" value="blind"> Blind (tanpa citra asli)</label>
-            </div>
-            <div class="block">Pembanding<br>
-              <label class="mr-3"><input type="radio" name="m2-wmmode" value="teks" checked> Teks</label>
-              <label><input type="radio" name="m2-wmmode" value="logo"> Logo</label>
-              <input id="m2-teks" type="text" placeholder="teks asli pembanding"
-                     class="mt-1 block w-full border rounded px-2 py-1">
-              <span id="m2-logorow" class="hidden mt-1 flex gap-2 items-center">
-                <input id="m2-logo" type="file" accept="image/*"
-                       class="flex-1 text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
-                <input id="m2-logow" type="number" value="32" min="1" title="lebar logo" class="w-16 border rounded px-1 py-1">
-                <span class="text-slate-400">x</span>
-                <input id="m2-logoh" type="number" value="32" min="1" title="tinggi logo" class="w-16 border rounded px-1 py-1">
+
+        <section class="rounded-2xl p-8 flex items-center justify-between gap-8 overflow-hidden" style="background:linear-gradient(120deg,#E4F2EB,#EFF7F1);">
+          <div class="max-w-[590px]">
+            <span class="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1 rounded-full mb-4" style="background:var(--mint-2); color:var(--brand-dark);">
+              Verifikasi Kepemilikan
+            </span>
+            <h2 class="text-[30px] leading-[1.15] font-extrabold text-[#152720] mb-3">Verifikasi Keaslian &amp; Kepemilikan Gambar</h2>
+            <p class="text-[14.5px] text-[#5b6b62] leading-relaxed">Bandingkan gambar asli milik Anda dengan gambar yang beredar untuk memeriksa watermark, nilai NC/BER, dan status kepemilikan.</p>
+          </div>
+          <div class="relative shrink-0 hidden md:block">
+            <p class="font-script text-[22px] text-[#3c584c] absolute -top-9 left-1 leading-tight">Buktikan<br>karya Anda.</p>
+            <div class="w-[210px] h-[135px] rounded-2xl border-2 border-dashed border-[#c7dccf] bg-white/70 flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="#9fb6ab" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l7 3v6c0 4.6-3 7.6-7 9-4-1.4-7-4.4-7-9V6l7-3z"/><path d="M9.2 12.3l2 2 4-4.6"/></svg>
+              <span class="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#33403a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              </span>
+              <span class="absolute -bottom-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center shadow" style="background:#3B82F6;">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 7.6-7 9-4-1.4-7-4.4-7-9V6l7-3z"/><path d="M9.2 12.3l2 2 4-4.6"/></svg>
               </span>
             </div>
-            <label class="block">Alpha saat penyisipan
-              <input id="m2-alpha" type="number" value="15" min="0.1" step="0.5"
-                     class="mt-1 block w-32 border rounded px-2 py-1">
-            </label>
           </div>
-          <div class="mt-3 flex items-center gap-3">
-            <button id="m2-verifikasi" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm">Verifikasi Kepemilikan</button>
-            <span id="m2-status" class="text-sm text-slate-500"></span>
-          </div>
-          <div id="m2-hasil" class="mt-3 text-sm"></div>
         </section>
+
+        <section class="card p-6">
+          <h3 class="font-bold text-[15px] text-[#16241c] mb-1">1. Masukkan Data Verifikasi</h3>
+          <p class="text-[12.5px] text-[#8b978f] mb-5">Gunakan parameter yang sama ketika watermark pertama kali disisipkan.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="field-label">Citra asli <span class="field-hint">(milik Anda)</span></label>
+              <label for="m2-asli" class="file-btn mb-2">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6"/><path d="M8 10l4-4 4 4"/><path d="M5 17v1.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V17"/></svg>
+                Pilih Citra Asli
+              </label>
+              <span id="m2-asli-filename" class="text-[12px] text-[#8b978f] ml-1">No file chosen</span>
+              <input id="m2-asli" type="file" accept="image/*" class="hidden">
+              <div class="preview-box mt-3">
+                <div id="m2-asli-placeholder" class="flex flex-col items-center gap-2 text-[#9aa89f]">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#b7c3bc" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="3.2" y="4.3" width="17.6" height="15.4" rx="2.2"/><circle cx="8.6" cy="9.4" r="1.5"/><path d="M20.5 15.8 16 11.3l-8.7 8.4"/></svg>
+                  <span class="text-[12.5px]">Belum ada gambar dipilih</span>
+                </div>
+                <img id="m2-asli-preview" class="hidden" alt="Citra asli">
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label">Citra tersangka <span class="field-hint">(temuan beredar)</span></label>
+              <label for="m2-tersangka" class="file-btn mb-2">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6"/><path d="M8 10l4-4 4 4"/><path d="M5 17v1.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V17"/></svg>
+                Pilih Citra Tersangka
+              </label>
+              <span id="m2-tersangka-filename" class="text-[12px] text-[#8b978f] ml-1">No file chosen</span>
+              <input id="m2-tersangka" type="file" accept="image/*" class="hidden">
+              <div class="preview-box mt-3">
+                <div id="m2-tersangka-placeholder" class="flex flex-col items-center gap-2 text-[#9aa89f]">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#b7c3bc" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="3.2" y="4.3" width="17.6" height="15.4" rx="2.2"/><circle cx="8.6" cy="9.4" r="1.5"/><path d="M20.5 15.8 16 11.3l-8.7 8.4"/></svg>
+                  <span class="text-[12.5px]">Belum ada gambar dipilih</span>
+                </div>
+                <img id="m2-tersangka-preview" class="hidden" alt="Citra tersangka">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-5 border-t border-[#eef1ee] grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+            <div>
+              <label class="field-label">Kunci saat penyisipan</label>
+              <input id="m2-key" type="text" placeholder="masukkan kunci watermark" class="input-field">
+            </div>
+
+            <div>
+              <label class="field-label">Jumlah bit watermark</label>
+              <input id="m2-nbit" type="number" min="1" placeholder="contoh: 72" class="input-field">
+              <p class="field-hint mt-1">Lihat nilai jumlah bit dari hasil Sisipkan.</p>
+            </div>
+
+            <div>
+              <label class="field-label">Alpha saat penyisipan <span class="field-hint">(5 lemah / 15 sedang / 30 kuat)</span></label>
+              <input id="m2-alpha" type="number" value="15" min="0.1" step="0.5" class="input-field w-32">
+            </div>
+
+            <div>
+              <label class="field-label">Skema</label>
+              <div class="flex flex-col gap-1.5">
+                <label class="radio-row" title="Tahan, tetapi membutuhkan citra asli saat ekstrak"><input type="radio" name="m2-skema" value="nonblind" checked> Non-blind <span class="field-hint">(butuh citra asli)</span></label>
+                <label class="radio-row" title="Terbaca tanpa citra asli, sedikit kurang tahan"><input type="radio" name="m2-skema" value="blind"> Blind <span class="field-hint">(tanpa citra asli)</span></label>
+              </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="field-label">Pembanding watermark</label>
+              <div class="flex items-center gap-4 mb-2">
+                <label class="radio-row"><input type="radio" name="m2-wmmode" value="teks" checked> Teks</label>
+                <label class="radio-row"><input type="radio" name="m2-wmmode" value="logo"> Logo</label>
+              </div>
+              <input id="m2-teks" type="text" placeholder="teks asli pembanding" class="input-field">
+              <span id="m2-logorow" class="hidden mt-2 flex flex-wrap gap-2 items-center">
+                <label for="m2-logo" class="file-btn" style="background:#3d5b52;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6"/><path d="M8 10l4-4 4 4"/><path d="M5 17v1.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V17"/></svg>
+                  Pilih Logo
+                </label>
+                <span id="m2-logo-filename" class="text-[12px] text-[#8b978f]">No file chosen</span>
+                <input id="m2-logo" type="file" accept="image/*" class="hidden">
+                <input id="m2-logow" type="number" value="32" min="1" title="lebar logo" class="input-field w-20">
+                <span class="text-[#8b978f]">×</span>
+                <input id="m2-logoh" type="number" value="32" min="1" title="tinggi logo" class="input-field w-20">
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-5 border-t border-[#eef1ee] flex flex-wrap items-center gap-3">
+            <button id="m2-verifikasi" class="btn-primary text-[13.5px] font-semibold px-4 py-2 rounded-lg inline-flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 7.6-7 9-4-1.4-7-4.4-7-9V6l7-3z"/><path d="M9.2 12.3l2 2 4-4.6"/></svg>
+              Verifikasi Kepemilikan
+            </button>
+            <span id="m2-status" class="text-[13px] text-[#8b978f]">Unggah citra tersangka untuk memulai.</span>
+          </div>
+        </section>
+
+        <section class="card p-6">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 class="font-bold text-[15px] text-[#16241c]">2. Hasil Verifikasi</h3>
+              <p class="text-[12.5px] text-[#8b978f] mt-0.5">Nilai hasil ekstraksi dan status kepemilikan akan muncul di bawah.</p>
+            </div>
+            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full" style="background:#eaf2fe;color:#2563eb;">NC / BER</span>
+          </div>
+          <div id="m2-hasil" class="result-box p-5 text-sm">
+            <div class="flex flex-col items-center justify-center gap-2 py-10 text-[#9aa89f]">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#b7c3bc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 7.6-7 9-4-1.4-7-4.4-7-9V6l7-3z"/><path d="M9.2 12.3l2 2 4-4.6"/></svg>
+              <p class="text-[13px]">Hasil verifikasi akan tampil setelah proses selesai.</p>
+            </div>
+          </div>
+        </section>
+
       </div>
 
-      <!-- ================= PAGE: WATERMARK DI CITRA AI (MODE 3) — belum diubah ================= -->
+      <!-- ================= PAGE: WATERMARK DI CITRA AI (MODE 3) ================= -->
       <div id="panel-mode3" class="hidden space-y-6">
-        <section class="bg-white rounded shadow p-4">
-          <h2 class="font-semibold mb-2">Watermark pada Citra AI-Generatif (pengayaan)</h2>
-          <p class="text-sm text-slate-500 mb-3">Menguji ketahanan <b>watermark kita</b> bila cover-nya gambar AI
-            (bukan mendeteksi apakah gambar dibuat AI).</p>
-          <p class="text-sm text-slate-500 mb-3">Alur sama seperti Mode 1 (logo pola 32×32, alpha 15),
-            tetapi cover-nya gambar AI. Hasil AI dibandingkan dengan <b>rata-rata 3 citra utama
-            dari hasil_pengujian.xlsx</b> (nilai acuan statis, bukan hitungan live).</p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-            <label class="block">Citra AI (JPG/PNG, ≤1024px disarankan)
-              <input id="m3-cover" type="file" accept="image/*"
-                     class="mt-1 block w-full text-sm file:mr-3 file:px-3 file:py-1 file:rounded file:border-0 file:bg-slate-900 file:text-white">
-            </label>
-            <label class="block">Kunci rahasia
-              <span class="mt-1 flex gap-2">
-                <input id="m3-key" type="text" placeholder="ketik atau buat acak"
-                       class="flex-1 border rounded px-2 py-1">
-                <button id="m3-acapkunci" type="button" class="px-3 py-1 rounded bg-slate-600 text-white">Acak</button>
+
+        <section class="rounded-2xl p-8 flex items-center justify-between gap-8 overflow-hidden" style="background:linear-gradient(120deg,#E4F2EB,#EFF7F1);">
+          <div class="max-w-[590px]">
+            <span class="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1 rounded-full mb-4" style="background:var(--mint-2); color:var(--brand-dark);">
+              Watermark di Citra AI
+            </span>
+            <h2 class="text-[30px] leading-[1.15] font-extrabold text-[#152720] mb-3">Uji Watermark pada Citra AI-Generatif</h2>
+            <p class="text-[14.5px] text-[#5b6b62] leading-relaxed">Uji ketahanan watermark ketika cover berupa gambar AI. Fitur ini menguji watermark kita, bukan mendeteksi apakah sebuah gambar dibuat oleh AI.</p>
+          </div>
+          <div class="relative shrink-0 hidden md:block">
+            <p class="font-script text-[22px] text-[#3c584c] absolute -top-9 left-1 leading-tight">Tetap autentik,<br>meski dibuat AI.</p>
+            <div class="w-[210px] h-[135px] rounded-2xl border-2 border-dashed border-[#c7dccf] bg-white/70 flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="#9fb6ab" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="3.2" y="4.3" width="17.6" height="15.4" rx="2.2"/><circle cx="8.6" cy="9.4" r="1.5"/><path d="M20.5 15.8 16 11.3l-8.7 8.4"/></svg>
+              <span class="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#33403a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
               </span>
-            </label>
-            <label class="block">Alpha
-              <input id="m3-alpha" type="number" value="15" min="0.1" step="0.5"
-                     class="mt-1 block w-32 border rounded px-2 py-1">
-            </label>
+              <span class="absolute -bottom-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center shadow" style="background:#5D43E2;">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l7 3v6c0 4.6-3 7.6-7 9-4-1.4-7-4.4-7-9V6l7-3z"/><path d="M9.2 12.3l2 2 4-4.6"/></svg>
+              </span>
+            </div>
           </div>
-          <div class="mt-3 flex items-center gap-3">
-            <button id="m3-jalan" class="px-4 py-1 rounded bg-emerald-600 text-white text-sm disabled:opacity-40" disabled>Sisip &amp; Uji (JPEG50/Noise/Crop)</button>
-            <span id="m3-status" class="text-sm text-slate-500">Unggah citra AI dulu.</span>
+        </section>
+
+        <section class="card p-6">
+          <h3 class="font-bold text-[15px] text-[#16241c] mb-1">1. Siapkan Citra AI</h3>
+          <p class="text-[12.5px] text-[#8b978f] mb-5">Gunakan JPG/PNG dengan ukuran ≤1024px bila memungkinkan. Alur memakai logo pola 32×32 dan parameter alpha yang Anda tentukan.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2">
+              <label class="field-label">Citra AI <span class="field-hint">(JPG/PNG, ≤1024px disarankan)</span></label>
+              <label for="m3-cover" class="file-btn mb-2">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6"/><path d="M8 10l4-4 4 4"/><path d="M5 17v1.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V17"/></svg>
+                Pilih Citra AI
+              </label>
+              <span id="m3-cover-filename" class="text-[12px] text-[#8b978f] ml-1">No file chosen</span>
+              <input id="m3-cover" type="file" accept="image/*" class="hidden">
+              <div class="preview-box mt-3">
+                <div id="m3-cover-placeholder" class="flex flex-col items-center gap-2 text-[#9aa89f]">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#b7c3bc" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="3.2" y="4.3" width="17.6" height="15.4" rx="2.2"/><circle cx="8.6" cy="9.4" r="1.5"/><path d="M20.5 15.8 16 11.3l-8.7 8.4"/></svg>
+                  <span class="text-[12.5px]">Belum ada gambar AI dipilih</span>
+                </div>
+                <img id="m3-cover-preview" class="hidden" alt="Citra AI">
+              </div>
+            </div>
+
+            <div class="space-y-5 text-sm">
+              <div>
+                <label class="field-label">Kunci rahasia <span class="field-hint">(tidak disimpan server)</span></label>
+                <div class="flex gap-2">
+                  <input id="m3-key" type="text" placeholder="ketik atau buat acak" class="input-field">
+                  <button id="m3-acapkunci" type="button" class="file-btn" style="background:#3d5b52;">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 0-2.6 5.9"/><path d="M20 5.5v5.2h-5.2"/></svg>
+                    Acak
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="field-label">Alpha <span class="field-hint">(5 lemah / 15 sedang / 30 kuat)</span></label>
+                <input id="m3-alpha" type="number" value="15" min="0.1" step="0.5" class="input-field w-32">
+              </div>
+
+              <div class="rounded-xl p-4" style="background:#f4f7f5;">
+                <p class="text-[12px] font-semibold text-[#33403a] mb-1">Metode uji</p>
+                <p class="text-[12px] text-[#8b978f] leading-relaxed">Sisip watermark → JPEG 50 → Noise → Crop 25% → ekstraksi → bandingkan NC dengan rata-rata 3 citra utama.</p>
+              </div>
+            </div>
           </div>
-          <div id="m3-hasil" class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
-          <div class="mt-3 text-sm overflow-x-auto">
-            <table class="border-collapse border text-sm">
-              <thead><tr class="bg-slate-100">
-                <th class="border px-2 py-1">Serangan</th><th class="border px-2 py-1">NC (AI, live)</th>
-                <th class="border px-2 py-1">NC rata-rata 3 citra (XLSX)</th><th class="border px-2 py-1">Selisih</th>
-              </tr></thead>
-              <tbody id="m3-banding"></tbody>
+
+          <div class="mt-6 pt-5 border-t border-[#eef1ee] flex flex-wrap items-center gap-3">
+            <button id="m3-jalan" class="btn-primary text-[13.5px] font-semibold px-4 py-2 rounded-lg inline-flex items-center gap-1.5 disabled:opacity-40" disabled>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M6 12l6 6 6-6"/></svg>
+              Sisip &amp; Uji
+            </button>
+            <span id="m3-status" class="text-[13px] text-[#8b978f]">Unggah citra AI dulu.</span>
+          </div>
+        </section>
+
+        <section class="card p-6">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 class="font-bold text-[15px] text-[#16241c]">2. Hasil Uji &amp; Ekstraksi</h3>
+              <p class="text-[12.5px] text-[#8b978f] mt-0.5">Setiap serangan menampilkan citra hasil dan metrik watermark.</p>
+            </div>
+            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full" style="background:#efebfd;color:#5D43E2;">AI Cover</span>
+          </div>
+          <div id="m3-hasil" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="col-span-full flex flex-col items-center justify-center gap-3 py-14 text-[#9aa89f] border border-dashed border-[#dde5e0] rounded-xl bg-[#fafbfa]">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#b7c3bc" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><rect x="3.2" y="4.3" width="17.6" height="15.4" rx="2.2"/><circle cx="8.6" cy="9.4" r="1.5"/><path d="M20.5 15.8 16 11.3 7.3 19.7"/></svg>
+              <p class="text-[13px]">Jalankan Sisip &amp; Uji untuk melihat hasil JPEG 50, Noise, dan Crop.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card p-6">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 class="font-bold text-[15px] text-[#16241c]">3. Perbandingan NC</h3>
+              <p class="text-[12.5px] text-[#8b978f] mt-0.5">Nilai acuan berasal dari rata-rata 3 citra utama pada hasil_pengujian.xlsx dan bersifat statis.</p>
+            </div>
+            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full" style="background:#eef2f0;color:#33403a;">Benchmark</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table-soft">
+              <thead>
+                <tr>
+                  <th>Serangan</th>
+                  <th>NC (AI, live)</th>
+                  <th>NC rata-rata 3 citra</th>
+                  <th>Selisih</th>
+                </tr>
+              </thead>
+              <tbody id="m3-banding">
+                <tr>
+                  <td colspan="4" class="text-center py-6 text-[#9aa89f]">Belum ada hasil perbandingan.</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </section>
+
       </div>
 
     </main>
@@ -832,7 +1030,7 @@ function fdEkstrak(blobSerang) {
 
 function kartuHasil(nama, psnr, b64, ekstraksi) {
   const div = document.createElement("div");
-  div.className = "border border-[#eef1ee] rounded-xl p-3 bg-[#fafbfa]";
+  div.className = "card p-3";
   let metrik = '<p class="text-sm font-mono" style="color:var(--brand-dark);">PSNR: ' + fmtPsnr(psnr) + "</p>";
   if (ekstraksi && ekstraksi.nc !== undefined) {
     metrik += '<p class="text-sm font-mono">NC: ' + Number(ekstraksi.nc).toFixed(4) +
@@ -933,6 +1131,39 @@ m1Semua.addEventListener("click", async () => {
 });
 
 // ---------- MODE 2 ----------
+function pasangPreviewFile(inputId, imgId, placeholderId, filenameId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.addEventListener("change", () => {
+    const file = input.files[0] || null;
+    const img = document.getElementById(imgId);
+    const placeholder = document.getElementById(placeholderId);
+    const filename = document.getElementById(filenameId);
+    if (file) {
+      if (img) {
+        img.src = URL.createObjectURL(file);
+        img.classList.remove("hidden");
+      }
+      if (placeholder) placeholder.classList.add("hidden");
+      if (filename) filename.textContent = file.name;
+    } else {
+      if (img) {
+        img.removeAttribute("src");
+        img.classList.add("hidden");
+      }
+      if (placeholder) placeholder.classList.remove("hidden");
+      if (filename) filename.textContent = "No file chosen";
+    }
+  });
+}
+pasangPreviewFile("m2-asli", "m2-asli-preview", "m2-asli-placeholder", "m2-asli-filename");
+pasangPreviewFile("m2-tersangka", "m2-tersangka-preview", "m2-tersangka-placeholder", "m2-tersangka-filename");
+
+document.getElementById("m2-logo").addEventListener("change", () => {
+  const file = document.getElementById("m2-logo").files[0];
+  document.getElementById("m2-logo-filename").textContent = file ? file.name : "No file chosen";
+});
+
 document.querySelectorAll('input[name="m2-skema"]').forEach(r => r.addEventListener("change", () => {
   const blind = document.querySelector('input[name="m2-skema"]:checked').value === "blind";
   document.getElementById("m2-asli").closest("label").classList.toggle("hidden", blind);
@@ -986,15 +1217,23 @@ document.getElementById("m2-verifikasi").addEventListener("click", async () => {
   btnVer.disabled = true;
   try {
     const d = await kirim(urlVer, fd);
-    let html = "";
+    let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">';
+    html += '<div>';
     if (d.watermark_base64) {
-      html += '<p class="font-medium mb-1">Watermark hasil ekstraksi:</p>' +
-        '<img class="max-h-40 rounded border" src="data:image/png;base64,' + d.watermark_base64 + '" alt="hasil">';
+      html += '<p class="text-[12px] font-semibold text-[#33403a] mb-2">Watermark hasil ekstraksi</p>' +
+        '<div class="preview-box h-[180px]"><img class="max-h-full max-w-full rounded" src="data:image/png;base64,' + d.watermark_base64 + '" alt="hasil"></div>';
+    } else {
+      html += '<div class="preview-box h-[180px] text-[#9aa89f] text-[13px]">Backend tidak mengembalikan citra watermark.</div>';
     }
-    if (d.teks_hasil !== undefined) html += "<p>Teks hasil: <code class='font-mono'>" + d.teks_hasil + "</code></p>";
-    html += "<p>NC: <b class='font-mono'>" + Number(d.nc).toFixed(4) + "</b> | BER: <b class='font-mono'>" +
-      (Number(d.ber) * 100).toFixed(2) + "%</b></p>" +
-      "<p class='text-base font-bold'>" + d.status_kepemilikan + "</p>";
+    html += '</div>';
+    html += '<div class="space-y-3">';
+    html += '<div class="grid grid-cols-2 gap-3">';
+    html += '<div class="rounded-xl p-4" style="background:#eaf2fe;"><p class="text-[11px] font-semibold text-[#5b6b62]">NC</p><p class="text-2xl font-extrabold text-[#16241c] font-mono">' + Number(d.nc).toFixed(4) + '</p></div>';
+    html += '<div class="rounded-xl p-4" style="background:#efebfd;"><p class="text-[11px] font-semibold text-[#5b6b62]">BER</p><p class="text-2xl font-extrabold text-[#16241c] font-mono">' + (Number(d.ber) * 100).toFixed(2) + '%</p></div>';
+    html += '</div>';
+    html += '<div class="rounded-xl p-4 border border-[#eef1ee]"><p class="text-[11px] font-semibold text-[#8b978f] mb-1">Status Kepemilikan</p><p class="text-base font-bold text-[#16241c]">' + d.status_kepemilikan + '</p></div>';
+    if (d.teks_hasil !== undefined) html += '<div class="rounded-xl p-4 border border-[#eef1ee]"><p class="text-[11px] font-semibold text-[#8b978f] mb-1">Teks hasil</p><code class="font-mono text-[13px] text-[#33403a] break-all">' + d.teks_hasil + '</code></div>';
+    html += '</div></div>';
     hasil.innerHTML = html;
     status.textContent = "Selesai.";
     catatAktivitas("verifikasi", "Verifikasi kepemilikan " + tersangka.name, d.status_kepemilikan || "Berhasil");
@@ -1020,6 +1259,20 @@ const m3Status = document.getElementById("m3-status");
 m3Cover.addEventListener("change", () => {
   S3.cover = m3Cover.files[0] || null;
   m3Jalan.disabled = !S3.cover;
+  const img = document.getElementById("m3-cover-preview");
+  const placeholder = document.getElementById("m3-cover-placeholder");
+  const filename = document.getElementById("m3-cover-filename");
+  if (S3.cover) {
+    img.src = URL.createObjectURL(S3.cover);
+    img.classList.remove("hidden");
+    placeholder.classList.add("hidden");
+    filename.textContent = S3.cover.name;
+  } else {
+    img.removeAttribute("src");
+    img.classList.add("hidden");
+    placeholder.classList.remove("hidden");
+    filename.textContent = "No file chosen";
+  }
   m3Status.textContent = S3.cover ? ("Siap: " + S3.cover.name) : "Unggah citra AI dulu.";
 });
 document.getElementById("m3-acapkunci").addEventListener("click", () => {
