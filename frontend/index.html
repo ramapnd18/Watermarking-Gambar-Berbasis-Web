@@ -49,10 +49,10 @@
 </head>
 <body class="bg-[#f4f6f4] text-slate-800 min-h-screen">
 
-<div class="flex min-h-screen">
+<div class="flex min-h-screen items-start">
 
   <!-- ================= SIDEBAR ================= -->
-  <aside class="w-[259px] shrink-0 flex flex-col justify-between text-white relative" style="background:var(--sidebar);">
+  <aside class="w-[259px] shrink-0 flex flex-col justify-between text-white sticky top-0 h-screen overflow-hidden" style="background:var(--sidebar);">
     <div>
       <div class="flex items-center gap-3 px-6 pt-6 pb-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:var(--brand);">
@@ -101,7 +101,7 @@
   </aside>
 
   <!-- ================= MAIN ================= -->
-  <div class="flex-1 min-w-0 flex flex-col">
+<div class="flex-1 min-w-0 flex flex-col self-stretch">
 
     <header class="h-[73px] shrink-0 flex items-center justify-between px-8 bg-[#f8faf9] border-b border-[#eef1ee]">
       <h1 id="page-title" class="text-[19px] font-bold text-[#16241c]">Beranda</h1>
